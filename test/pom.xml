@@ -49,5 +49,11 @@
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.feddoubt</groupId>
+            <artifactId>utils</artifactId>
+        </dependency>
+
     </dependencies>
 </project>
