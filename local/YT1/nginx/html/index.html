@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube to MP3/MP4 Converter</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link href="./static/styles/styles.css" rel="stylesheet" type="text/css">
+  <script src="./static/script/common.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div class="converter-container">
+        <h1>YouTube to {{ format.toUpperCase() }} Converter</h1>
+        <div class="input-container">
+            <input type="text" v-model="url" placeholder="Paste YouTube URL here...">
+        </div>
+        <div class="button-container">
+            <button @click="convert">Convert</button>
+            <div class="switch">
+                <input v-model="isMP4" class="switch-checkbox" id="switchID1" type="checkbox" name="switch-checkbox">
+                <label class="switch-label" for="switchID1">
+                    <span class="switch-txt" turnOn="MP4" turnOff="MP3":data-format="isMP4 ? 'MP4' : 'MP3'"></span>
+                    <span class="switch-Round-btn"></span>
+                </label>
+                <!-- <p>{{isMP4}}</p> -->
+            </div>
+        </div>
+        <!-- <button @click="downloadMP3Test">downloadMP3test</button> -->
+        <button v-if="filename" @click="downloadMP3">Download {{ downloadformat.toUpperCase() }}</button>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          url: '',
+          isMP4: false,
+          filename: null,
+          downloadformat: 'mp3'
+        };
+      },
+      computed: {
+        format() {
+          return this.isMP4 ? 'mp4' : 'mp3';
+        }
+      },
+      methods: {
+        async convert() {
+          if (!this.url) {
+            alert('Please enter a YouTube URL.');
+            return;
+          }
+          
+        //  test:
+        //        this.downloadformat = this.isMP4 ? 'mp4' : 'mp3';
+        //   this.downloadUrl = this.url;
+
+          try {
+            const response = await axios.post('/YT1/convert', {
+              url: this.url,
+              format: this.format
+            });
+
+            if (response.data && response.data.filename) {
+               this.downloadformat = this.isMP4 ? 'mp4' : 'mp3';
+                this.filename = response.data.filename;
+            } else {
+              throw new Error('Invalid response from server');
+            }
+          } catch (error) {
+            console.error(error);
+            alert('An error occurred during the conversion. Please try again.');
+          }
+        },
+        async downloadMP3() {
+            try {
+                const response = await axios.get('/YT1/download', {
+                    params: { 
+                        filename: this.filename,
+                        date: new Date().toISOString(),
+                    },
+                    responseType: 'blob' // Important for downloading files
+                });
+
+                // const response = await axios.post('/YT1/download', {
+                //     filename: this.filename,
+                //     date: new Date().toISOString(),
+                //     responseType: 'blob' // Important for downloading files
+                // });
+
+                // 創建下載鏈接
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement("a");
+                link.href = url;
+                link.setAttribute("download", this.filename); // 設置文件名
+                link.click();
+
+                // 釋放 URL 資源
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error("下載失敗：", error);
+            }
+        },
+        async downloadMP3Test() {
+            try {
+                const response = await axios.get('/YT1/downloadtest', {
+                    responseType: 'blob' // Important for downloading files
+                });
+
+                // 創建下載鏈接
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement("a");
+                link.href = url;
+                link.setAttribute("download", "sample.mp3"); // 設置文件名
+                link.click();
+
+                // 釋放 URL 資源
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error("下載失敗：", error);
+            }
+        },
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
