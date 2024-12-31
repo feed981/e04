@@ -30,7 +30,7 @@ public class YouTubeService {
         return yt1Vo;
     }
 
-    public Path downloadFile(String filename) throws IOException, InterruptedException{
+    public Map<String, Object> downloadFile(String filename) throws IOException{
         return FileUtils.downloadFileYT1(filename);
     }
 }
