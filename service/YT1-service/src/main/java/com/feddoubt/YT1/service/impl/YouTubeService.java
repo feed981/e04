@@ -1,32 +1,36 @@
 package com.feddoubt.YT1.service.impl;
 
+import com.feddoubt.model.YT1.dtos.YT1Dto;
+import com.feddoubt.model.YT1.vos.YT1Vo;
+import com.feddoubt.utils.FileUtils;
 import com.feddoubt.utils.YouTubeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 
 @Slf4j
 @Service
 public class YouTubeService {
 
-    public String convertToMp3(String url) throws Exception {
+    public YT1Vo convertToMp3(YT1Dto dto) throws Exception {
+        String url = dto.getUrl();
         log.info("url:{}",url);
 
-        Map<String, String> map = YouTubeUtils.downloadVideo(url);
+        Map<String, String> map = YouTubeUtils.downloadVideo(dto);
         String result = map.get("result");
-        String mp3Path = "";
-
-        // Step 2: 將影片轉換為 MP3
-        if(!result.equals("error") && !result.equals("exist")){
-            mp3Path = YouTubeUtils.convertToMp3(map);
-        }else{
-            mp3Path = map.get("mp3Path");
-        }
+        String output = map.get("filename");
 
         log.info("result:{}", result);
-        log.info("mp3Path:{}", mp3Path);
+        log.info("output:{}", output);
+        YT1Vo yt1Vo = new YT1Vo();
+        yt1Vo.setFilename(output);
+        return yt1Vo;
+    }
 
-        return mp3Path;
+    public Path downloadFile(String filename) throws IOException, InterruptedException{
+        return FileUtils.downloadFileYT1(filename);
     }
 }

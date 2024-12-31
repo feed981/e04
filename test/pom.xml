@@ -52,6 +52,11 @@
 
         <dependency>
             <groupId>com.feddoubt</groupId>
+            <artifactId>model</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.feddoubt</groupId>
             <artifactId>utils</artifactId>
         </dependency>
 

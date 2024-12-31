@@ -1,5 +1,6 @@
 package com.feddoubt.utils;
 
+import com.feddoubt.model.YT1.dtos.YT1Dto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,17 +33,23 @@ public class YouTubeUtils {
         }
     }
 
-    public static Map<String, String> downloadVideo(String url) throws IOException, InterruptedException {
+    public static Map<String, String> downloadVideo(YT1Dto dto) throws IOException, InterruptedException {
+        String url = dto.getUrl();
+        String format = dto.getFormat();//mp3 ,mp4
         Map<String, String> map = new HashMap<>();
+        map.put("format" ,format);
+        logger.info("format:{}", format);
+
         map.put("result" ,"ok");
         String title = getVideoTitle(url);
+        String filename = title + "." + format;
+        map.put("filename" ,filename);
 
-        String outputPath = outputDirectory + "\\" + title + ".mp3";
+        String outputPath = outputDirectory + "\\" + filename;
         File file = new File(outputPath);
         // 检查文件是否存在
         if(file.exists()){
             map.put("result" ,"exist");
-            map.put("mp3Path" ,outputPath);
             return map;
         }
         map.put("title" ,title);
@@ -63,20 +70,18 @@ public class YouTubeUtils {
         process.waitFor();
 
         map.put("output" ,output);
+        convertToMp3(map);
+
         return map;
     }
 
-    public static String convertToMp3(Map<String, String> map) throws IOException, InterruptedException {
-        String title = map.get("title");
+    // format: mp3 ,mp4 這句可以單獨跑
+    public static void convertToMp3(Map<String, String> map) throws IOException, InterruptedException {
+        String filename = map.get("filename");
         String videoPath = map.get("output");
 
-        // 获取文件名（不带扩展名）
-        String fileName = new File(videoPath).getName().replaceFirst("\\.[^.]+$", "");
-        logger.info("videoPath:{}", videoPath);
-        logger.info("fileName:{}", fileName);
-
         // 拼接输出路径
-        String outputPath = outputDirectory + "\\" + title + ".mp3";
+        String outputPath = outputDirectory + "\\" + filename;
         logger.info("outputPath:{}", outputPath);
 
         // 确保路径中的目录存在
@@ -108,8 +113,6 @@ public class YouTubeUtils {
         if (exitCode != 0) {
             throw new IOException("Conversion failed with exit code " + exitCode);
         }
-
-        return outputPath;
     }
 
 }
