@@ -27,6 +27,10 @@
                 <!-- <p>{{isMP4}}</p> -->
             </div>
         </div>
+        <!-- 加載中的轉圈動畫 -->
+    <div v-if="isLoading" class="loader-container">
+        <div class="loader"></div>
+      </div>
         <!-- <button @click="downloadMP3Test">downloadMP3test</button> -->
         <button v-if="filename" @click="downloadMP3">Download {{ downloadformat.toUpperCase() }}</button>
     </div>
@@ -40,8 +44,9 @@
         return {
           url: '',
           isMP4: false,
-          filename: null,
-          downloadformat: 'mp3'
+          filename: '',
+          downloadformat: 'mp3',
+          isLoading: false, // 加載狀態
         };
       },
       computed: {
@@ -61,6 +66,7 @@
         //   this.downloadUrl = this.url;
 
           try {
+            this.isLoading = true;
             const response = await axios.post('/YT1/convert', {
               url: this.url,
               format: this.format
@@ -75,7 +81,9 @@
           } catch (error) {
             console.error(error);
             alert('An error occurred during the conversion. Please try again.');
-          }
+            } finally {
+            this.isLoading = false; // 請求結束，停止加載
+            }
         },
         async downloadMP3() {
             try {
