@@ -61,9 +61,24 @@
             <version>1.4.11</version>
         </dependency>
 
+        <!--内部依赖工程 start-->
+
+        <dependency>
+            <groupId>com.feddoubt</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.feddoubt</groupId>
             <artifactId>model</artifactId>
+        </dependency>
+
+
+        <!--内部依赖工程 end-->
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20210307</version>
         </dependency>
     </dependencies>
 </project>

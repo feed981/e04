@@ -60,6 +60,11 @@
     <dependencies>
 
       <!--内部依赖工程 start-->
+      <dependency>
+        <groupId>com.feddoubt</groupId>
+        <artifactId>common</artifactId>
+        <version>1.0-SNAPSHOT</version>
+      </dependency>
 
       <dependency>
         <groupId>com.feddoubt</groupId>
@@ -72,7 +77,6 @@
         <artifactId>utils</artifactId>
         <version>1.0-SNAPSHOT</version>
       </dependency>
-
 
       <!--内部依赖工程 end-->
 
@@ -179,6 +183,8 @@
         <artifactId>hutool-all</artifactId>
         <version>${hutool.version}</version>
       </dependency>
+
+
     </dependencies>
   </dependencyManagement>
 </project>
