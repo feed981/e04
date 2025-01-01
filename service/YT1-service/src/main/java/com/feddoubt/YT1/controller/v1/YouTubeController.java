@@ -6,6 +6,7 @@ import com.feddoubt.model.YT1.dtos.YT1FileDto;
 import com.feddoubt.model.YT1.vos.YT1Vo;
 import com.feddoubt.utils.YouTubeUtils;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,7 @@ import java.util.Map;
 
 import static com.hankcs.hanlp.dictionary.CoreBiGramMixDictionary.path;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/YT1")
 public class YouTubeController {
@@ -38,57 +40,33 @@ public class YouTubeController {
     @Autowired
     private YouTubeService youTubeService;
 
-    // params 包含 { url: 'YouTube URL' }
+    @Autowired
+    private YouTubeUtils youTubeUtils;
+
     @PostMapping("/convert")
-    public ResponseEntity<?> convertToMp3(@RequestBody YT1Dto dto) {
+    public ResponseEntity<?> convertToMp3ORMp4(@RequestBody YT1Dto dto) {
         String url = dto.getUrl();
-        if (url == null || !YouTubeUtils.isValidYouTubeUrl(url)) {
+        if (url == null || !youTubeUtils.isValidYouTubeUrl(url)) {
             return ResponseEntity.badRequest().body("Invalid YouTube URL");
         }
 
         try {
-            YT1Vo yt1Vo = youTubeService.convertToMp3(dto);
+            YT1Vo yt1Vo = youTubeService.convertToMp3ORMp4(dto);
             return ResponseEntity.ok(yt1Vo);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Conversion failed: " + e.getMessage());
         }
     }
 
-//    @PostMapping("/download")
-//    public ResponseEntity<Resource> downloadFile(@RequestBody YT1FileDto dto) throws IOException {
-//        try{
-//            String filename = dto.getFilename();
-//            Map<String, Object> map = youTubeService.downloadFile(filename);
-//            String mimeType = (String) map.get("mimeType");
-//            String filePath = (String) map.get("Path");
-//            File file = new File(filePath);
-//
-//            // 創建資源
-//            Path path = file.toPath();
-//            Resource resource = new ByteArrayResource(Files.readAllBytes(path));
-//
-//            // 設置響應頭
-//            return ResponseEntity.ok()
-//                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-//                    .contentType(MediaType.parseMediaType(mimeType))
-//                    .contentLength(file.length())
-//                    .body(resource);
-//        } catch (Exception e) {
-//            throw new RuntimeException("下載檔案時發生錯誤: " + e.getMessage(), e);
-//        }
-//    }
-
     @GetMapping("/download")
     public ResponseEntity<Resource> downloadFile(@RequestParam String filename, @RequestParam String date) throws IOException{
         try {
-
             Map<String, Object> map = youTubeService.downloadFile(filename);
             String mimeType = (String) map.get("mimeType");
             String filePath = (String) map.get("Path");
-
+            log.info("mimeType:{}",mimeType);
+            log.info("filePath:{}",filePath);
 //            String filePath = "C:\\YT1\\download\\" + filename;
-            System.out.println("mimeType:" + mimeType);
-            System.out.println("filePath:" + filePath);
             File file = new File(filePath);
 
             // 創建資源
@@ -106,15 +84,15 @@ public class YouTubeController {
         }
     }
 
-    @GetMapping("/downloadtest")
+//    @GetMapping("/downloadtest")
     public ResponseEntity<Resource> downloadFile() {
         try {
             // 模擬 MP3 文件路徑
             String filePath = "C:\\YT1\\download\\Waves.mp3";
             String mimeType = "audio/mpeg";
             File file = new File(filePath);
-            System.out.println("mimeType:" + mimeType);
-            System.out.println("filePath:" + filePath);
+//            log.info("mimeType:{}",mimeType);
+//            log.info("filePath:{}",filePath);
             // 創建資源
             Path path = file.toPath();
             Resource resource = new ByteArrayResource(Files.readAllBytes(path));
