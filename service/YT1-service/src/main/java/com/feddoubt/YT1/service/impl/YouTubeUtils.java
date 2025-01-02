@@ -1,6 +1,6 @@
-package com.feddoubt.utils;
+package com.feddoubt.YT1.service.impl;
 
-import com.feddoubt.common.ws.ProgressWebSocketServer;
+import com.feddoubt.YT1.config.ConfigProperties;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -9,9 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.io.*;
-
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,14 +26,23 @@ public class YouTubeUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(YouTubeUtils.class);
 
-    private static final String ytdlp = "C:\\Tools\\yt-dlp\\yt-dlp.exe";
-    private static final String outputDirectory = "C:\\YT1\\download\\";
-    private static final String videoPathtDirectory = outputDirectory + "output\\";
+    @Autowired
+    private ConfigProperties configProperties;
 
-    private static final String YT1baseDir = "C:\\YT1\\download\\";
+    private String ytdlp;
+    private String YT1baseDir;
+
+    @PostConstruct
+    public void init() {
+        this.ytdlp = configProperties.getYtdlpPath();
+        this.YT1baseDir = configProperties.getYt1BaseDir();
+    }
+
+//    private final String ytdlp = "C:\\Tools\\yt-dlp\\yt-dlp.exe";
+//    private final String YT1baseDir = "C:\\YT1\\download\\";
 
     @Autowired
-    private ProgressWebSocketServer progressWebSocketServer;
+    private DownloadListener downloadListener;
 
     // 驗證url
     public boolean isValidYouTubeUrl(String url) {
@@ -43,6 +51,7 @@ public class YouTubeUtils {
 
     // title
     public String getVideoTitle(String url) throws IOException, InterruptedException {
+
         ProcessBuilder processBuilder = new ProcessBuilder(ytdlp, "--dump-json", url);
         processBuilder.redirectErrorStream(true); // 合併標準錯誤流到標準輸出流
         Process process = processBuilder.start();
@@ -84,7 +93,21 @@ public class YouTubeUtils {
 
 
     // download youtube video
+
+    /**
+     *
+     * RabbitMQ：适用于 大规模任务处理 和 分布式架构。
+     * Executors.newSingleThreadExecutor()：适用于 小规模任务 和 本地处理。
+     *
+     * convertToMp3ORMp4 屬於“大任務”
+     * 基於以下原因：
+     * 資源消耗高：轉換操作需要消耗大量 CPU 和 I/O 資源。
+     * 運行時間不確定：處理視頻長短和解析度不同，運行時間可能變化較大。
+     * 可能的併發需求：如果需要處理多個視頻，系統負載會迅速增長。
+     */
     public Map<String, Object> downloadVideo(YT1Dto dto) throws IOException, InterruptedException {
+//        logger.info("ytdlp:{}", ytdlp);
+//        logger.info("YT1baseDir:{}", YT1baseDir);
         String url = dto.getUrl();
         String format = dto.getFormat();//mp3 ,mp4
         Map<String, Object> map = new HashMap<>();
@@ -96,14 +119,6 @@ public class YouTubeUtils {
         String filename = title + "." + format;
         map.put("filename" ,filename);
 
-        String outputPath = outputDirectory + "\\" + filename;
-        File file = new File(outputPath);
-        // 检查文件是否存在
-        if(file.exists()){
-            map.put("result" ,"exist");
-            return map;
-        }
-        map.put("title" ,title);
         logger.info("title:{}", title);
         if (title == null || title.isEmpty()) {
             throw new IOException("Failed to fetch video title.");
@@ -111,61 +126,71 @@ public class YouTubeUtils {
 
         // 替換不允許的文件名字符（Windows 文件系統的限制）
         String sanitizedTitle = title.replaceAll("[\\\\/:*?\"<>|]", "_");
-        String output = videoPathtDirectory + sanitizedTitle + ".mp4.webm";
+        String output = YT1baseDir + "output\\" + sanitizedTitle + ".mp4.webm";
+
+        File file = new File(output);
+        // 检查文件是否存在
+        if(file.exists()){
+            map.put("result" ,"exist");
+            logger.info("exist:{}", map.get("result"));
+            return map;
+        }
 
         map.put("output", output);
         logger.info("output:{}", output);
 
         // 發送下載命令
         String command = String.format("%s -o \"%s\" %s",ytdlp, output, url);
-        Process process = Runtime.getRuntime().exec(command);
+        map.put("command",command);
+        //MQ
+        downloadListener.handleDownload(map);
 
         // 異步執行下載後的 convertToMp3 操作，避免阻塞主線程
-        EXECUTOR.submit(() -> {
-            try {
-                // 等待進程完成
-                double duration = duration(process);
-                logger.info("duration:{}", duration);
-                process.waitFor();
-                map.put("duration", duration);
-
-                // 異步執行 MP3 轉換
-                convertToMp3ORMp4(map);
-                logger.info("MP3 conversion completed for: {}", output);
-                // 您可以在這裡觸發完成通知（例如 WebSocket 消息或數據庫更新）
-            } catch (Exception e) {
-                logger.error("Error during video download or MP3 conversion", e);
-            }
-        });
+//        EXECUTOR.submit(() -> {
+//            try {
+//                // 等待進程完成
+//                double duration = duration(process);
+//                logger.info("duration:{}", duration);
+//                process.waitFor();
+//                map.put("duration", duration);
+//
+//                // 異步執行 MP3 轉換
+//                convertToMp3ORMp4(map);
+//                logger.info("MP3 conversion completed for: {}", output);
+//                // 您可以在這裡觸發完成通知（例如 WebSocket 消息或數據庫更新）
+//            } catch (Exception e) {
+//                logger.error("Error during video download or MP3 conversion", e);
+//            }
+//        });
 
         return map;
     }
 
     // 解析 yt-dlp 輸出的流， 搜尋總時長
-    private double duration(Process process) throws IOException, InterruptedException {
-        double totalSeconds = 0;
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String line;
-            String duration = null;
-
-            while ((line = reader.readLine()) != null) {
-                logger.info(line); // 查看輸出，方便調試
-
-                // 搜尋總時長（例如: Duration: 00:05:23）
-                if (line.contains("Duration")) {
-                    duration = line.substring(line.indexOf("Duration:") + 9).trim().split(",")[0];
-                    logger.info("Total Duration:{}",duration);
-                }
-            }
-
-            // 如果需要，可以將時長轉為秒數方便計算進度
-            if (duration != null) {
-                totalSeconds = parseTimeToSeconds(duration);
-                logger.info("Total Duration in Seconds:{}", totalSeconds);
-            }
-        }
-        return totalSeconds;
-    }
+//    public double duration(Process process) throws IOException, InterruptedException {
+//        double totalSeconds = 0;
+//        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+//            String line;
+//            String duration = null;
+//
+//            while ((line = reader.readLine()) != null) {
+//                logger.info(line); // 查看輸出，方便調試
+//
+//                // 搜尋總時長（例如: Duration: 00:05:23）
+//                if (line.contains("Duration")) {
+//                    duration = line.substring(line.indexOf("Duration:") + 9).trim().split(",")[0];
+//                    logger.info("Total Duration:{}",duration);
+//                }
+//            }
+//
+//            // 如果需要，可以將時長轉為秒數方便計算進度
+//            if (duration != null) {
+//                totalSeconds = parseTimeToSeconds(duration);
+//                logger.info("Total Duration in Seconds:{}", totalSeconds);
+//            }
+//        }
+//        return totalSeconds;
+//    }
 
     // 秒
     private double parseTimeToSeconds(String time) {
@@ -198,9 +223,9 @@ public class YouTubeUtils {
 
     // format: mp3 ,mp4
     public void convertToMp3ORMp4(Map<String, Object> map) throws IOException, InterruptedException {
-        String outputPath = outputDirectory + (String) map.get("filename");
+        String outputPath = YT1baseDir + (String) map.get("filename");
         String videoPath = (String) map.get("output");
-        int totalSeconds = (int) map.get("duration");
+//        int totalSeconds = (int) map.get("duration");
 
         // 拼接输出路径
         logger.info("convertToMp3ORMp4 videoPath:{}", videoPath);
@@ -209,23 +234,28 @@ public class YouTubeUtils {
         Process process = getProcess(videoPath, outputPath);
 
         // 读取输出流并解析进度
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
-                if (line.contains("time=")) {
-                    // 提取时间信息（例如 time=00:00:10.50）
-                    String timeInfo = line.substring(line.indexOf("time=") + 5, line.indexOf("bitrate=")).trim();
-                    System.out.println("Current Progress: " + timeInfo);
-                    getTimeInfo(line ,totalSeconds);
-                }
-            }
-        }
+        getProcessLog(process);
 
         // 等待进程完成
         int exitCode = process.waitFor();
         if (exitCode != 0) {
             throw new IOException("Conversion failed with exit code " + exitCode);
+        }
+    }
+
+    public void getProcessLog(Process process) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                logger.info(line); // 查看輸出，方便調試
+
+//                if (line.contains("time=")) {
+//                    // 提取时间信息（例如 time=00:00:10.50）
+//                    String timeInfo = line.substring(line.indexOf("time=") + 5, line.indexOf("bitrate=")).trim();
+//                    System.out.println("Current Progress: " + timeInfo);
+////                    getTimeInfo(line ,totalSeconds);
+//                }
+            }
         }
     }
 
@@ -236,7 +266,7 @@ public class YouTubeUtils {
         }
 
         // 确保路径中的目录存在
-        new File(outputDirectory).mkdirs();
+        new File(YT1baseDir).mkdirs();
 
         // 创建命令
         String command = String.format("ffmpeg -i \"%s\" -q:a 0 -map a \"%s\"", videoPath, outputPath);

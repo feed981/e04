@@ -1,4 +1,4 @@
-package com.feddoubt;
+package com.feddoubt.test;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -11,7 +11,7 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
-public class App
+public class LocalDownloadTest
 {
     private static final Logger logger = LoggerFactory.getLogger(YouTubeUtils.class);
 

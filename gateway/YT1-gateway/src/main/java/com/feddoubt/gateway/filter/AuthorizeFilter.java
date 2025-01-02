@@ -1,4 +1,4 @@
-package com.feddoubt.YT1.gateway.filter;
+package com.feddoubt.gateway.filter;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;

@@ -2,10 +2,8 @@ package com.feddoubt.YT1.controller.v1;
 
 import com.feddoubt.YT1.service.impl.YouTubeService;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
-import com.feddoubt.model.YT1.dtos.YT1FileDto;
 import com.feddoubt.model.YT1.vos.YT1Vo;
-import com.feddoubt.utils.YouTubeUtils;
-import lombok.Data;
+import com.feddoubt.YT1.service.impl.YouTubeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -16,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -26,11 +23,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Date;
 import java.util.Map;
 
-import static com.hankcs.hanlp.dictionary.CoreBiGramMixDictionary.path;
 
 @Slf4j
 @RestController
