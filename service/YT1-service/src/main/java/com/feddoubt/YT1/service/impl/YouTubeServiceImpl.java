@@ -1,7 +1,8 @@
 package com.feddoubt.YT1.service.impl;
 
+import com.feddoubt.YT1.service.IYouTubeService;
+import com.feddoubt.YT1.service.utils.YouTubeUtils;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
-import com.feddoubt.model.YT1.vos.YT1Vo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,12 +12,13 @@ import java.util.Map;
 
 @Slf4j
 @Service
-public class YouTubeService {
+public class YouTubeServiceImpl implements IYouTubeService {
 
     @Autowired
     private YouTubeUtils youTubeUtils;
 
-    public YT1Vo convertToMp3ORMp4(YT1Dto dto) throws Exception {
+    @Override
+    public String convertToMp3ORMp4(YT1Dto dto) throws Exception {
         String url = dto.getUrl();
         log.info("url:{}",url);
 
@@ -26,11 +28,10 @@ public class YouTubeService {
 
         log.info("result:{}", result);
         log.info("filename:{}", filename);
-        YT1Vo yt1Vo = new YT1Vo();
-        yt1Vo.setFilename(filename);
-        return yt1Vo;
+        return result;
     }
 
+    @Override
     public Map<String, Object> downloadFile(String filename) throws IOException{
         return youTubeUtils.downloadFileYT1(filename);
     }

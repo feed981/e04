@@ -1,9 +1,8 @@
 package com.feddoubt.YT1.controller.v1;
 
-import com.feddoubt.YT1.service.impl.YouTubeService;
+import com.feddoubt.YT1.service.IYouTubeService;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
-import com.feddoubt.model.YT1.vos.YT1Vo;
-import com.feddoubt.YT1.service.impl.YouTubeUtils;
+import com.feddoubt.YT1.service.utils.YouTubeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -32,7 +31,7 @@ import java.util.Map;
 public class YouTubeController {
 
     @Autowired
-    private YouTubeService youTubeService;
+    private IYouTubeService youTubeService;
 
     @Autowired
     private YouTubeUtils youTubeUtils;
@@ -45,8 +44,8 @@ public class YouTubeController {
         }
 
         try {
-            YT1Vo yt1Vo = youTubeService.convertToMp3ORMp4(dto);
-            return ResponseEntity.ok(yt1Vo);
+            String result = youTubeService.convertToMp3ORMp4(dto);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Conversion failed: " + e.getMessage());
         }

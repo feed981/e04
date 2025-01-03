@@ -1,5 +1,6 @@
-package com.feddoubt.YT1.service.impl;
+package com.feddoubt.YT1.service.mq;
 
+import com.feddoubt.YT1.service.utils.YouTubeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;

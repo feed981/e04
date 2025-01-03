@@ -1,5 +1,6 @@
-package com.feddoubt.YT1.service.impl;
+package com.feddoubt.YT1.service.mq;
 
+import com.feddoubt.YT1.service.utils.YouTubeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -8,7 +9,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j

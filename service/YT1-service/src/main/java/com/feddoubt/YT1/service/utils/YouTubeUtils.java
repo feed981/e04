@@ -1,11 +1,13 @@
-package com.feddoubt.YT1.service.impl;
+package com.feddoubt.YT1.service.utils;
 
 import com.feddoubt.YT1.config.ConfigProperties;
+import com.feddoubt.YT1.service.mq.DownloadListener;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -42,7 +44,7 @@ public class YouTubeUtils {
 //    private final String YT1baseDir = "C:\\YT1\\download\\";
 
     @Autowired
-    private DownloadListener downloadListener;
+    private RabbitTemplate rabbitTemplate;
 
     // 驗證url
     public boolean isValidYouTubeUrl(String url) {
@@ -142,8 +144,7 @@ public class YouTubeUtils {
         // 發送下載命令
         String command = String.format("%s -o \"%s\" %s",ytdlp, output, url);
         map.put("command",command);
-        //MQ
-        downloadListener.handleDownload(map);
+        rabbitTemplate.convertAndSend("downloadQueue", map);
 
         // 異步執行下載後的 convertToMp3 操作，避免阻塞主線程
 //        EXECUTOR.submit(() -> {

@@ -18,5 +18,9 @@ public class RabbitMQConfig {
         return new Queue("convertQueue", true);
     }
 
+    @Bean
+    public Queue downloadLogQueue() {
+        return new Queue("downloadLogQueue", true);
+    }
 }
 
