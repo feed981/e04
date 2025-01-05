@@ -1,4 +1,4 @@
-package com.feddoubt.YT1.config;
+package com.feddoubt.common.YT1.config;
 
 import org.springframework.amqp.core.Queue;
 import org.springframework.context.annotation.Bean;
@@ -23,4 +23,3 @@ public class RabbitMQConfig {
         return new Queue("downloadLogQueue", true);
     }
 }
-

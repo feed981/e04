@@ -2,7 +2,7 @@ package com.feddoubt.test;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import com.feddoubt.utils.YouTubeUtils;
+//import com.feddoubt.YT1.YouTubeUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class LocalDownloadTest
 {
-    private static final Logger logger = LoggerFactory.getLogger(YouTubeUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(LocalDownloadTest.class);
 
     public static void main( String[] args ) throws IOException, InterruptedException {
 

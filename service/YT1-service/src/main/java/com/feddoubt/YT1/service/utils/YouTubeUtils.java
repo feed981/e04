@@ -1,8 +1,7 @@
 package com.feddoubt.YT1.service.utils;
 
 import com.feddoubt.YT1.config.ConfigProperties;
-import com.feddoubt.YT1.service.mq.DownloadListener;
-import com.feddoubt.model.YT1.dtos.YT1Dto;
+import com.feddoubt.common.YT1.dtos.YT1Dto;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -10,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
 import java.io.*;
@@ -40,15 +40,12 @@ public class YouTubeUtils {
         this.YT1baseDir = configProperties.getYt1BaseDir();
     }
 
-//    private final String ytdlp = "C:\\Tools\\yt-dlp\\yt-dlp.exe";
-//    private final String YT1baseDir = "C:\\YT1\\download\\";
-
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
     // 驗證url
-    public boolean isValidYouTubeUrl(String url) {
-        return url != null && url.matches("^https?://(www\\.)?youtube\\.com/watch\\?v=.*$");
+    public Mono<Boolean> isValidYouTubeUrl(String url) {
+        return Mono.just(url != null && url.matches("^https?://(www\\.)?youtube\\.com/watch\\?v=.*$"));
     }
 
     // title
@@ -80,7 +77,6 @@ public class YouTubeUtils {
 
             // 清理標題
             return cleanTitle(rawTitle);
-//            return null;
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
@@ -90,8 +86,6 @@ public class YouTubeUtils {
     private static String cleanTitle(String title) {
         return title.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
-
-    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
 
     // download youtube video
@@ -107,7 +101,7 @@ public class YouTubeUtils {
      * 運行時間不確定：處理視頻長短和解析度不同，運行時間可能變化較大。
      * 可能的併發需求：如果需要處理多個視頻，系統負載會迅速增長。
      */
-    public Map<String, Object> downloadVideo(YT1Dto dto) throws IOException, InterruptedException {
+    public Mono<String> downloadVideo(YT1Dto dto) throws IOException, InterruptedException {
 //        logger.info("ytdlp:{}", ytdlp);
 //        logger.info("YT1baseDir:{}", YT1baseDir);
         String url = dto.getUrl();
@@ -116,7 +110,6 @@ public class YouTubeUtils {
         map.put("format" ,format);
         logger.info("format:{}", format);
 
-        map.put("result" ,"ok");
         String title = getVideoTitle(url);
         String filename = title + "." + format;
         map.put("filename" ,filename);
@@ -133,9 +126,7 @@ public class YouTubeUtils {
         File file = new File(output);
         // 检查文件是否存在
         if(file.exists()){
-            map.put("result" ,"exist");
-            logger.info("exist:{}", map.get("result"));
-            return map;
+            return Mono.just("exist");
         }
 
         map.put("output", output);
@@ -146,25 +137,7 @@ public class YouTubeUtils {
         map.put("command",command);
         rabbitTemplate.convertAndSend("downloadQueue", map);
 
-        // 異步執行下載後的 convertToMp3 操作，避免阻塞主線程
-//        EXECUTOR.submit(() -> {
-//            try {
-//                // 等待進程完成
-//                double duration = duration(process);
-//                logger.info("duration:{}", duration);
-//                process.waitFor();
-//                map.put("duration", duration);
-//
-//                // 異步執行 MP3 轉換
-//                convertToMp3ORMp4(map);
-//                logger.info("MP3 conversion completed for: {}", output);
-//                // 您可以在這裡觸發完成通知（例如 WebSocket 消息或數據庫更新）
-//            } catch (Exception e) {
-//                logger.error("Error during video download or MP3 conversion", e);
-//            }
-//        });
-
-        return map;
+        return Mono.just("ok");
     }
 
     // 解析 yt-dlp 輸出的流， 搜尋總時長
@@ -223,44 +196,46 @@ public class YouTubeUtils {
     }
 
     // format: mp3 ,mp4
-    public void convertToMp3ORMp4(Map<String, Object> map) throws IOException, InterruptedException {
-        String outputPath = YT1baseDir + (String) map.get("filename");
+    public Mono<Void> convertToMp3ORMp4(Map<String, Object> map) throws IOException {
+        String outputPath = YT1baseDir + map.get("filename");
         String videoPath = (String) map.get("output");
-//        int totalSeconds = (int) map.get("duration");
 
-        // 拼接输出路径
-        logger.info("convertToMp3ORMp4 videoPath:{}", videoPath);
-        logger.info("convertToMp3ORMp4 outputPath:{}", outputPath);
+        logger.info("convertToMp3ORMp4 videoPath: {}", videoPath);
+        logger.info("convertToMp3ORMp4 outputPath: {}", outputPath);
 
-        Process process = getProcess(videoPath, outputPath);
-
-        // 读取输出流并解析进度
-        getProcessLog(process);
-
-        // 等待进程完成
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new IOException("Conversion failed with exit code " + exitCode);
-        }
+        return getProcess(videoPath, outputPath)
+                .flatMap(this::getProcessLog) // 打印日志后返回 Process
+                .flatMap(process -> Mono.fromCallable(() -> {
+                    try {
+                        int exitCode = process.waitFor();
+                        if (exitCode != 0) {
+                            throw new IOException("Conversion failed with exit code " + exitCode);
+                        }
+                        return null;
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Process was interrupted", e);
+                    }
+                }))
+                .then(); // 返回 Mono<Void>
     }
 
-    public void getProcessLog(Process process) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                logger.info(line); // 查看輸出，方便調試
-
-//                if (line.contains("time=")) {
-//                    // 提取时间信息（例如 time=00:00:10.50）
-//                    String timeInfo = line.substring(line.indexOf("time=") + 5, line.indexOf("bitrate=")).trim();
-//                    System.out.println("Current Progress: " + timeInfo);
-////                    getTimeInfo(line ,totalSeconds);
-//                }
+    public Mono<Process> getProcessLog(Process process) {
+        //使用 Mono.create 以便非阻塞读取进程输出。
+        return Mono.create(sink -> {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.info(line);
+                }
+                sink.success(process); // 完成后返回 process 对象
+            } catch (IOException e) {
+                sink.error(e);
             }
-        }
+        });
     }
 
-    private Process getProcess(String videoPath, String outputPath) throws IOException {
+    private Mono<Process> getProcess(String videoPath, String outputPath) throws IOException {
         File videoFile = new File(videoPath);
         if (!videoFile.exists()) {
             throw new FileNotFoundException("Input video file does not exist: " + videoPath);
@@ -275,10 +250,10 @@ public class YouTubeUtils {
         // 使用 ProcessBuilder 执行命令
         ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", command);
         builder.redirectErrorStream(true); // 将错误流合并到标准输出流
-        return builder.start();
+        return Mono.just(builder.start());
     }
 
-    public Map<String, Object> downloadFileYT1(String filename) throws IOException {
+    public Mono<Map<String, Object>> downloadFileYT1(String filename) throws IOException {
         Map<String, Object> map = new HashMap<>(2);
         // 檔案名稱驗證： 確保檔案名稱中沒有目錄穿越的字元（例如 ../ 或 ..\）
         if (filename.contains("..")) {
@@ -309,6 +284,6 @@ public class YouTubeUtils {
         map.put("mimeType",mimeType);
         logger.info("mimeType:{}",mimeType);
 
-        return map;
+        return Mono.just(map);
     }
 }
