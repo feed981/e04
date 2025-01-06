@@ -172,3 +172,24 @@ body {
     transform: translate(-50%, -50%);
     z-index: 9999;
   }
+
+  .loader-percentage {
+    margin-top: 10px;
+    font-size: 16px;
+    color: #555;
+  }
+
+  /* .error ,.success{
+    display: none;
+  } */
+
+.error {
+  color: #ff3333;
+  margin-top: 10px;
+  text-align: center;
+}
+.success {
+  color: #33aa33;
+  margin-top: 10px;
+  text-align: center;
+}

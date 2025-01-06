@@ -22,4 +22,9 @@ public class RabbitMQConfig {
     public Queue downloadLogQueue() {
         return new Queue("downloadLogQueue", true);
     }
+
+    @Bean
+    public Queue notificationQueue() {
+        return new Queue("notificationQueue", true);
+    }
 }

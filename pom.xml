@@ -54,6 +54,8 @@
 
     <okhttp3.version>4.11.0</okhttp3.version>
     <hutool.version>5.7.17</hutool.version>
+
+    <websocket.version>2.3.9.RELEASE</websocket.version>
   </properties>
 
   <dependencyManagement>
