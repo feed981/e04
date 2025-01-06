@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class LocalDownloadTest
 {
@@ -29,14 +31,39 @@ public class LocalDownloadTest
          title:�����_���E���H _ ������q _ ���g������q _ �n�_�� _ Kids Song in Chinese _ ��q���� _ �d�q�ʵe _ ���g�������ܬG��
 
          */
-        String url = "https://www.youtube.com/watch?v=cdeXmXY45EA";
+//        String url = "https://www.youtube.com/watch?v=cdeXmXY45EA";
 //        String videoTitle = getVideoTitle(url);
 //        String videoTitle = YouTubeUtils.getVideoTitle(url);
 
-        Map<String, Object> map = new HashMap<>();
-        map.put("filename","【聽故事過節】#冬至 為什麼要 #吃湯圓 ？餛飩的由來竟然跟大美女 #西施 有關？｜小行星樂樂TV.mp3");
-        map.put("output","【聽故事過節】#冬至 為什麼要 #吃湯圓 ？餛飩的由來竟然跟大美女 #西施 有關？｜小行星樂樂TV.mp4.webm");
-        convertToMp3ORMp4(map);
+//        Map<String, Object> map = new HashMap<>();
+//        map.put("filename","【聽故事過節】#冬至 為什麼要 #吃湯圓 ？餛飩的由來竟然跟大美女 #西施 有關？｜小行星樂樂TV.mp3");
+//        map.put("output","【聽故事過節】#冬至 為什麼要 #吃湯圓 ？餛飩的由來竟然跟大美女 #西施 有關？｜小行星樂樂TV.mp4.webm");
+//        convertToMp3ORMp4(map);
+        boolean b = isValidYouTubeUrl("https://www.youtube.com/watch?v=fSbUGufOt8o");
+        System.out.println(b);
+    }
+
+    public static Boolean isValidYouTubeUrl(String url) {
+
+        return url != null && url.matches(patternYoutubeUrl);
+    }
+
+    private final static String patternYoutubeUrl = "^https?://(www\\.)?youtube\\.com/watch\\?v=.*$";
+    public static void videoid(String url){
+        String videoID = "";
+        if (url.contains("v=")) {
+            int startIndex = url.indexOf("v=") + 2; // 獲取 v= 的位置並加上 2
+            int endIndex = url.indexOf("&", startIndex); // 獲取 & 的位置
+            if (endIndex == -1) { // 如果沒有 &，則獲取到字符串結尾
+                endIndex = url.length();
+            }
+            videoID = url.substring(startIndex, endIndex);
+        System.out.println(videoID);
+        }
+
+//        Pattern pattern = Pattern.compile(patternYoutubeUrl);
+//        Matcher matcher = pattern.matcher(url);
+//        return "https://www.youtube.com/embed/" + matcher.group(4);
     }
     
     private static final String ytdlp = "C:\\Tools\\yt-dlp\\yt-dlp.exe";

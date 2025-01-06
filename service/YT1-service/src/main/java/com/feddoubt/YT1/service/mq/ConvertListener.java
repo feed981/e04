@@ -1,6 +1,5 @@
 package com.feddoubt.YT1.service.mq;
 
-import com.feddoubt.YT1.service.NotificationService;
 import com.feddoubt.YT1.service.utils.YouTubeUtils;
 import com.feddoubt.common.YT1.s3.S3Service;
 import lombok.extern.slf4j.Slf4j;
@@ -19,9 +18,6 @@ public class ConvertListener {
 
     @Autowired
     private YouTubeUtils youTubeUtils;
-
-    @Autowired
-    private NotificationService notificationService;
 
 //    @Autowired
 //    private S3Service s3Service;
@@ -53,11 +49,4 @@ public class ConvertListener {
         }
     }
 
-    @RabbitListener(queues = "${rabbitmq.notification-queue}")
-    @Async
-    public void handleNotification(String message) {
-        log.info("message:{}",message);
-        // 推送消息到前端
-        notificationService.sendNotification("/topic/convert", message);
-    }
 }

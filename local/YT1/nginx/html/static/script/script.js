@@ -11,6 +11,7 @@ createApp({
         loadingPercentage: 0,
         errorMessage: '',
         successMessage: '',
+        embedUrl: '',
     };
     },
     mounted() {
@@ -40,6 +41,10 @@ createApp({
                     client.subscribe("/topic/convert", (message) => {
                         this.filename = message.body;
                         this.successMessage = `You can download now! Please check your browser's download folder.`;
+                        console.log("Received message: ", message.body);
+                    });
+                    client.subscribe("/topic/embedUrl", (message) => {
+                        this.embedUrl = message.body;
                         console.log("Received message: ", message.body);
                     });
                 },

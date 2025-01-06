@@ -27,4 +27,9 @@ public class RabbitMQConfig {
     public Queue notificationQueue() {
         return new Queue("notificationQueue", true);
     }
+
+    @Bean
+    public Queue embedUrlQueue() {
+        return new Queue("embedUrlQueue", true);
+    }
 }

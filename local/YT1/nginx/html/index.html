@@ -45,8 +45,11 @@
       <div class="success">
         {{ successMessage }}
     </div>
+    <div v-if="embedUrl" class="embedUrl">
+      <iframe :src="embedUrl" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
   </div>
+</div>
   <script src="./static/script/common.js"></script>
   <script src="./static/script/script.js"></script>
 </body>

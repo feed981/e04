@@ -18,8 +18,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -43,9 +41,24 @@ public class YouTubeUtils {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    private final static String patternYoutubeUrl = "^https?://(www\\.)?youtube\\.com/watch\\?v=.*$";
+
+    public void embedUrl(String url){
+        String videoID = "";
+        if (url.contains("v=")) {
+            int startIndex = url.indexOf("v=") + 2; // 獲取 v= 的位置並加上 2
+            int endIndex = url.indexOf("&", startIndex); // 獲取 & 的位置
+            if (endIndex == -1) { // 如果沒有 &，則獲取到字符串結尾
+                endIndex = url.length();
+            }
+            videoID = url.substring(startIndex, endIndex);
+            rabbitTemplate.convertAndSend("embedUrlQueue", "https://www.youtube.com/embed/" + videoID);
+        }
+    }
+
     // 驗證url
     public Boolean isValidYouTubeUrl(String url) {
-        return url != null && url.matches("^https?://(www\\.)?youtube\\.com/watch\\?v=.*$");
+        return url != null && url.matches(patternYoutubeUrl);
     }
 
     // title
@@ -109,6 +122,7 @@ public class YouTubeUtils {
         Map<String, Object> map = new HashMap<>();
         map.put("format" ,format);
         logger.info("format:{}", format);
+        embedUrl(url);
 
         String title = getVideoTitle(url);
         String filename = title + "." + format;
