@@ -1,13 +1,14 @@
 package com.feddoubt.YT1.service.utils;
 
 import com.feddoubt.YT1.config.ConfigProperties;
-import com.feddoubt.common.YT1.dtos.YT1Dto;
+import com.feddoubt.model.YT1.dtos.YT1Dto;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 
@@ -70,13 +71,22 @@ public class YouTubeUtils {
 
         // 讀取命令輸出的標題
         // 讀取命令輸出，指定字符集為 UTF-8
+        /**
+         * test1: https://www.youtube.com/watch?v=Snv24UgcEoX 不存在的錯誤訪問
+         */
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "UTF-8"))) {
             StringBuilder jsonOutput = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
+                if(line.contains("ERROR")){
+                    logger.info("line: " + line);
+                    return line;
+                }
                 jsonOutput.append(line);
             }
             process.waitFor();
+            logger.info("Raw output: " + jsonOutput.toString());
+
             if (jsonOutput.length() == 0) {
                 throw new IOException("無法獲取視頻標題。請檢查 URL 或 yt-dlp 命令。");
             }
@@ -114,7 +124,7 @@ public class YouTubeUtils {
      * 運行時間不確定：處理視頻長短和解析度不同，運行時間可能變化較大。
      * 可能的併發需求：如果需要處理多個視頻，系統負載會迅速增長。
      */
-    public String downloadVideo(YT1Dto dto) throws IOException, InterruptedException {
+    public ResponseEntity<?> downloadVideo(YT1Dto dto) throws IOException, InterruptedException {
 //        logger.info("ytdlp:{}", ytdlp);
 //        logger.info("YT1baseDir:{}", YT1baseDir);
         String url = dto.getUrl();
@@ -122,9 +132,13 @@ public class YouTubeUtils {
         Map<String, Object> map = new HashMap<>();
         map.put("format" ,format);
         logger.info("format:{}", format);
-        embedUrl(url);
 
         String title = getVideoTitle(url);
+        if(title.contains("ERROR")){
+            return ResponseEntity.badRequest().body(title);
+        }
+        embedUrl(url);
+
         String filename = title + "." + format;
         map.put("filename" ,filename);
 
@@ -141,8 +155,9 @@ public class YouTubeUtils {
         // 检查文件是否已下載並轉換過該格式
         File file = new File(videoPath);
         if(file.exists()){
+            logger.info("file.exists");
             rabbitTemplate.convertAndSend("notificationQueue", filename);
-            return "exist";
+            return ResponseEntity.ok().build();
         }
 
         map.put("output", output);
@@ -159,7 +174,7 @@ public class YouTubeUtils {
             rabbitTemplate.convertAndSend("downloadQueue", map);
         }
 
-        return "ok";
+        return ResponseEntity.ok().build();
     }
 
     // 解析 yt-dlp 輸出的流， 搜尋總時長
@@ -268,7 +283,7 @@ public class YouTubeUtils {
         return builder.start();
     }
 
-    public Map<String, Object> downloadFileYT1(String filename) throws IOException {
+    public Map<String, Object> downloadFile(String filename) throws IOException {
         Map<String, Object> map = new HashMap<>(2);
         // 檔案名稱驗證： 確保檔案名稱中沒有目錄穿越的字元（例如 ../ 或 ..\）
         if (filename.contains("..")) {

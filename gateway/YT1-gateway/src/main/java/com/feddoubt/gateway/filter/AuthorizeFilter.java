@@ -1,9 +1,7 @@
 package com.feddoubt.gateway.filter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.feddoubt.common.YT1.dtos.YT1Dto;
-import com.feddoubt.common.YT1.event.DownloadLogEvent;
+//import com.feddoubt.model.YT1.dtos.YT1Dto;
+//import com.feddoubt.model.YT1.event.DownloadLogEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,24 +91,24 @@ public class AuthorizeFilter implements Ordered, GlobalFilter {
         return new String(bodyBytes, StandardCharsets.UTF_8);
     }
 
-    private void sendMessage(ServerWebExchange exchange, YT1Dto dto) {
-        String ipAddress = exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
-        String userAgent = exchange.getRequest().getHeaders().getFirst("User-Agent");
-
-        DownloadLogEvent event = new DownloadLogEvent(ipAddress, dto.getUrl(), dto.getFormat(), userAgent);
-        log.info("Sending event: {}", event);
-        rabbitTemplate.convertAndSend("downloadLogQueue", event);
-    }
-
-    private Mono<YT1Dto> parseDto(String body) {
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            return Mono.just(mapper.readValue(body, YT1Dto.class));
-        } catch (JsonProcessingException e) {
-            log.error("Failed to parse DTO: {}", e.getMessage());
-            return Mono.error(e);
-        }
-    }
+//    private void sendMessage(ServerWebExchange exchange, YT1Dto dto) {
+//        String ipAddress = exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
+//        String userAgent = exchange.getRequest().getHeaders().getFirst("User-Agent");
+//
+//        DownloadLogEvent event = new DownloadLogEvent(ipAddress, dto.getUrl(), dto.getFormat(), userAgent);
+//        log.info("Sending event: {}", event);
+//        rabbitTemplate.convertAndSend("downloadLogQueue", event);
+//    }
+//
+//    private Mono<YT1Dto> parseDto(String body) {
+//        ObjectMapper mapper = new ObjectMapper();
+//        try {
+//            return Mono.just(mapper.readValue(body, YT1Dto.class));
+//        } catch (JsonProcessingException e) {
+//            log.error("Failed to parse DTO: {}", e.getMessage());
+//            return Mono.error(e);
+//        }
+//    }
 
     private Mono<Void> handleErrorResponse(ServerWebExchange exchange, Throwable e) {
         exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);

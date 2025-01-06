@@ -1,9 +1,11 @@
 package com.feddoubt.YT1.controller.v1;
 
 import com.feddoubt.YT1.service.IYouTubeService;
-import com.feddoubt.common.YT1.dtos.YT1Dto;
 import com.feddoubt.YT1.service.utils.YouTubeUtils;
-import com.feddoubt.common.YT1.event.DownloadLogEvent;
+import com.feddoubt.common.YT1.bucket4j.DownloadLimiter;
+import com.feddoubt.model.YT1.dtos.YT1Dto;
+import com.feddoubt.model.YT1.event.DownloadLogEvent;
+import com.feddoubt.common.YT1.ResponseMessages;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +13,6 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-//import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -28,8 +29,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Objects;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 
 @Slf4j
 @RestController
@@ -45,40 +49,48 @@ public class YouTubeController {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    @Autowired
+    private DownloadLimiter downloadLimiter;
+
     @PostMapping("/convert")
     public ResponseEntity<?> convertToMp3ORMp4(@RequestBody YT1Dto dto , HttpServletRequest request) throws Exception {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
+        String userIdentifier = getUserIdentifier(request);
         String userAgent = request.getHeader("User-Agent");
 
 //        String ipAddress = Objects.requireNonNull(request.getRemoteAddress()).getAddress().getHostAddress();
 //        String userAgent = request.getHeaders().getFirst("User-Agent");
-        log.info("ipAddress: {}", ipAddress);
+        log.info("ipAddress: {}", userIdentifier);
         log.info("userAgent: {}", userAgent);
 
-        DownloadLogEvent downloadLogEvent = new DownloadLogEvent(ipAddress, dto.getUrl(), dto.getFormat(), userAgent);
+        DownloadLogEvent downloadLogEvent = new DownloadLogEvent(userIdentifier, dto.getUrl(), dto.getFormat(), userAgent);
         log.info("Sending event: {}", downloadLogEvent);
         rabbitTemplate.convertAndSend("downloadLogQueue", downloadLogEvent);
 
         String url = dto.getUrl();
         if (url == null || url.isEmpty()) {
-            return ResponseEntity.badRequest().body("URL cannot be null or empty");
+            return ResponseEntity.badRequest().body(ResponseMessages.URL_CANNOT_BE_NULL_OR_EMPTY);
         }
 
         Boolean validYouTubeUrl = youTubeUtils.isValidYouTubeUrl(url);
 
         if (!validYouTubeUrl) {
-            return ResponseEntity.badRequest().body("Invalid YouTube URL");
+            return ResponseEntity.badRequest().body(ResponseMessages.INVALID_YOUTUBE_URL);
         }
 
-        String result = youTubeService.convertToMp3ORMp4(dto);
-        return ResponseEntity.ok(result);
+        return  youTubeService.convertToMp3ORMp4(dto);
     }
 
     @GetMapping("/download")
-    public ResponseEntity<Resource> downloadFile(@RequestParam String filename, @RequestParam String date) throws IOException{
+    public ResponseEntity<?> downloadFile(HttpServletRequest request ,@RequestParam String filename
+    ) throws IOException{
+
+        String userIdentifier = getUserIdentifier(request);
+        String requestHash = generateRequestHash(userIdentifier + ":" + filename);
+
+        if (!downloadLimiter.tryDownload(requestHash)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(ResponseMessages.TOO_MANY_REQUESTS);
+        }
+
         Map<String, Object> stringObjectMap = youTubeService.downloadFile(filename);
 
         String mimeType = (String) stringObjectMap.get("mimeType");
@@ -104,5 +116,25 @@ public class YouTubeController {
                 .contentType(MediaType.parseMediaType(mimeType))
                 .contentLength(file.length())
                 .body(resource);
+    }
+
+    private String getUserIdentifier(HttpServletRequest request) {
+        String ipAddress = request.getHeader("X-Forwarded-For");
+        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getRemoteAddr();
+        }
+        return ipAddress;
+    }
+
+    private String generateRequestHash(String... components) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            // 将所有组件用 ":" 连接，生成单一字符串
+            String data = String.join(":", components);
+            byte[] hash = digest.digest(data.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Unable to generate hash", e);
+        }
     }
 }

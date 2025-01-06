@@ -1,7 +1,8 @@
-package com.feddoubt.common.YT1.event;
+package com.feddoubt.model.YT1.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
 import java.io.Serializable;
 @Data
 @AllArgsConstructor

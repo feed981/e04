@@ -1,7 +1,7 @@
 package com.feddoubt.YT1.service.mq;
 
 import com.feddoubt.YT1.repo.DownloadLogRepository;
-import com.feddoubt.common.YT1.event.DownloadLogEvent;
+import com.feddoubt.model.YT1.event.DownloadLogEvent;
 import com.feddoubt.model.YT1.entity.DownloadLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;

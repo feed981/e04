@@ -65,6 +65,8 @@ createApp({
             if (!this.url ||!this.isValidYouTubeURL(this.url)) {
                 this.errorMessage = 'Please enter a valid YouTube URL';
                 this.successMessage = '';
+                this.embedUrl = '';
+                this.filename = '';
                 return;
             }
             
@@ -72,38 +74,44 @@ createApp({
         //        this.downloadformat = this.isMP4 ? 'mp4' : 'mp3';
         //   this.downloadUrl = this.url;
 
-            try {
-                this.isLoading = true;
-                this.filename = '';
-                this.loadingPercentage = 0;
-                const response = await axios.post('/YT1/convert', {
-                    url: this.url,
-                    format: this.format
-                });
-
-                if (response.data === 'ok' || response.data === 'exist') {
+            this.isLoading = true;
+            this.filename = '';
+            this.loadingPercentage = 0;
+            const response = await axios.post('/YT1/convert', {
+                url: this.url,
+                format: this.format
+            }).then(response => {
+                if (response.status === 200) {
                     this.downloadformat = this.isMP4 ? 'mp4' : 'mp3';
                     this.errorMessage = '';
                     this.successMessage = `Your ${this.format.toUpperCase()} conversion is in progress. A download link will be available shortly!`;
-                } else {
-                    throw new Error('Invalid response from server');
                 }
-            } catch (error) {
-                console.error(error);
-                alert('An error occurred during the conversion. Please try again.');
-            } finally {
+            }).catch(error => {
+                if (error.response) {
+                    // 服务器返回的响应数据
+                    this.errorMessage = error.response.data;
+                    this.embedUrl = '';
+                    console.error('Request failed', error.response.data);
+                } else if (error.request) {
+                    // 请求已发出但没有收到响应
+                    console.error('No response received', error.request);
+                } else {
+                    // 其他错误，如设置请求时触发的错误
+                    console.error('Error', error.message);
+                }
+            }).finally(() => { 
                 this.isLoading = false
-            }
+            });
+
         },
         async downloadMP3() {
-            try {
-                const response = await axios.get('/YT1/download', {
-                    params: { 
-                        filename: this.filename,
-                        date: new Date().toISOString(),
-                    },
-                    responseType: 'blob' // Important for downloading files
-                });
+            const response = await axios.get('/YT1/download', {
+                params: { 
+                    filename: this.filename,
+                    // date: new Date().toISOString(),
+                },
+                responseType: 'blob' // Important for downloading files
+            }).then(response => {
                 // 創建下載鏈接
                 const url = window.URL.createObjectURL(new Blob([response.data]));
                 const link = document.createElement("a");
@@ -113,9 +121,19 @@ createApp({
 
                 // 釋放 URL 資源
                 window.URL.revokeObjectURL(url);
-            } catch (error) {
-                console.error("下載失敗：", error);
-            }
+            }).catch(error => {
+                if (error.response) {
+                    // 服务器返回的响应数据
+                    this.errorMessage = 'You have reached the download limit. Please try again later.';
+                    this.successMessage = '';
+                } else if (error.request) {
+                    // 请求已发出但没有收到响应
+                    console.error('No response received', error.request);
+                } else {
+                    // 其他错误，如设置请求时触发的错误
+                    console.error('Error', error.message);
+                }
+            });
         },
     }
 }).mount('#app');

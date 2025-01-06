@@ -1,4 +1,4 @@
-package com.feddoubt.common.YT1.dtos;
+package com.feddoubt.model.YT1.dtos;
 
 import lombok.Data;
 
