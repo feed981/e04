@@ -2,7 +2,7 @@ package com.feddoubt.YT1.controller.v1;
 
 import com.feddoubt.YT1.service.IYouTubeService;
 import com.feddoubt.YT1.service.utils.YouTubeUtils;
-import com.feddoubt.common.YT1.bucket4j.DownloadLimiter;
+import com.feddoubt.YT1.service.redis.DownloadLimiter;
 import com.feddoubt.common.YT1.config.message.*;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
 import com.feddoubt.model.YT1.event.DownloadLogEvent;
@@ -89,7 +89,7 @@ public class YouTubeController {
         String requestHash = generateRequestHash(userIdentifier + ":" + filename);
 
         if (!downloadLimiter.tryDownload(requestHash)) {
-            return ResponseUtils.httpStatus2ApiResponse(new HttpStatusAdapter(HttpStatus.TOO_MANY_REQUESTS));
+            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.TOO_MANY_REQUESTS);
         }
 
         Map<String, Object> stringObjectMap = youTubeService.downloadFile(filename);

@@ -88,7 +88,7 @@ public class YouTubeUtils {
                 jsonOutput.append(line);
             }
             process.waitFor();
-            logger.info("Raw output: " + jsonOutput.toString());
+//            logger.info("Raw output: " + jsonOutput.toString());
 
             if (jsonOutput.length() == 0) {
                 throw new IOException("無法獲取視頻標題。請檢查 URL 或 yt-dlp 命令。");
@@ -138,7 +138,7 @@ public class YouTubeUtils {
 
         String title = getVideoTitle(url);
         if(title.contains("ERROR")){
-            ApiResponse<String> error = ResponseUtils.error(title);
+            ApiResponse<String> error = ResponseUtils.error(500,title,null);
             return ResponseEntity.ok(error);
         }
         embedUrl(url);
@@ -161,7 +161,7 @@ public class YouTubeUtils {
         if(file.exists()){
             logger.info("file.exists");
             rabbitTemplate.convertAndSend("notificationQueue", filename);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok(ResponseUtils.success());
         }
 
         map.put("output", output);
@@ -178,7 +178,7 @@ public class YouTubeUtils {
             rabbitTemplate.convertAndSend("downloadQueue", map);
         }
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(ResponseUtils.success());
     }
 
     // 解析 yt-dlp 輸出的流， 搜尋總時長

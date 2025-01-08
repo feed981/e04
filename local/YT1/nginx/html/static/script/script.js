@@ -8,7 +8,6 @@ createApp({
         filename: '',
         downloadformat: 'mp3',
         isLoading: false, // loading style
-        loadingPercentage: 0,
         errorMessage: '',
         successMessage: '',
         embedUrl: '',
@@ -16,11 +15,6 @@ createApp({
     },
     mounted() {
         this.connectws();
-    //   const interval = setInterval(() => {
-    //     if (this.loadingPercentage < 100) {
-    //       this.loadingPercentage += 1; // 每秒增加 3%
-    //     }
-    //   }, 50); // 每秒更新一次
     },
     computed: {
     format() {
@@ -61,30 +55,29 @@ createApp({
         async convert() {
             this.errorMessage = '';
             this.successMessage = '';
+            this.embedUrl = '';
+            this.filename = '';
+            this.isLoading = true;
 
             if (!this.url ||!this.isValidYouTubeURL(this.url)) {
                 this.errorMessage = 'Please enter a valid YouTube URL';
                 this.successMessage = '';
-                this.embedUrl = '';
-                this.filename = '';
+                this.isLoading = false;
                 return;
             }
             
-        //  test:
-        //        this.downloadformat = this.isMP4 ? 'mp4' : 'mp3';
-        //   this.downloadUrl = this.url;
-
-            this.isLoading = true;
-            this.filename = '';
-            this.loadingPercentage = 0;
-            const response = await axios.post('/YT1/convert', {
+            await axios.post('/YT1/convert', {
                 url: this.url,
                 format: this.format
             }).then(response => {
-                if (response.status === 200) {
+                if (response.data.success === true) {
                     this.downloadformat = this.isMP4 ? 'mp4' : 'mp3';
                     this.errorMessage = '';
                     this.successMessage = `Your ${this.format.toUpperCase()} conversion is in progress. A download link will be available shortly!`;
+                
+                }else if(response.data.success === false){
+                    this.errorMessage = response.data.message;
+                    this.successMessage = '';
                 }
             }).catch(error => {
                 if (error.response) {
@@ -105,22 +98,34 @@ createApp({
 
         },
         async downloadMP3() {
-            const response = await axios.get('/YT1/download', {
+            await axios.get('/YT1/download', {
                 params: { 
                     filename: this.filename,
                     // date: new Date().toISOString(),
                 },
                 responseType: 'blob' // Important for downloading files
-            }).then(response => {
-                // 創建下載鏈接
-                const url = window.URL.createObjectURL(new Blob([response.data]));
-                const link = document.createElement("a");
-                link.href = url;
-                link.setAttribute("download", this.filename); // 設置文件名
-                link.click();
+            }).then(async response => {
+                if (response.headers['content-type'] === 'application/json') {
+                    // 將 blob 轉為 JSON
+                    const text = await response.data.text();
+                    const json = JSON.parse(text);
+                    if (json.success === false) {
+                        this.errorMessage = json.message;
+                        this.successMessage = '';
+                        return;
+                    }
 
-                // 釋放 URL 資源
-                window.URL.revokeObjectURL(url);
+                }else{
+                    // 創建下載鏈接
+                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.setAttribute("download", this.filename); // 設置文件名
+                    link.click();
+    
+                    // 釋放 URL 資源
+                    window.URL.revokeObjectURL(url);
+                }
             }).catch(error => {
                 if (error.response) {
                     // 服务器返回的响应数据

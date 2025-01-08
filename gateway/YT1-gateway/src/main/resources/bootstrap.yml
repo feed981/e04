@@ -2,6 +2,8 @@ server:
   address: 0.0.0.0
   port: 64101
 spring:
+  main:
+    web-application-type: reactive
   application:
     name: YT1-gateway
   cloud:

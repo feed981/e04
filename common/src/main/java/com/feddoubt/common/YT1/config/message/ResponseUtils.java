@@ -16,6 +16,10 @@ public class ResponseUtils {
         return success(200, data);
     }
 
+    public static <T> ApiResponse<T> success() {
+        return ApiResponse.<T>builder().code(200).success(true).build();
+    }
+
     public static <T> ApiResponse<T> error(int code, String message) {
         return ApiResponse.<T>builder().code(code).message(message).success(false).build();
     }
