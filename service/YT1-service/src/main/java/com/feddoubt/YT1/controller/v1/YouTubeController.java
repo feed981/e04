@@ -3,9 +3,9 @@ package com.feddoubt.YT1.controller.v1;
 import com.feddoubt.YT1.service.IYouTubeService;
 import com.feddoubt.YT1.service.utils.YouTubeUtils;
 import com.feddoubt.common.YT1.bucket4j.DownloadLimiter;
+import com.feddoubt.common.YT1.config.message.*;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
 import com.feddoubt.model.YT1.event.DownloadLogEvent;
-import com.feddoubt.common.YT1.ResponseMessages;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,17 +68,18 @@ public class YouTubeController {
 
         String url = dto.getUrl();
         if (url == null || url.isEmpty()) {
-            return ResponseEntity.badRequest().body(ResponseMessages.URL_CANNOT_BE_NULL_OR_EMPTY);
+            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.URL_CANNOT_BE_NULL_OR_EMPTY);
         }
 
         Boolean validYouTubeUrl = youTubeUtils.isValidYouTubeUrl(url);
 
         if (!validYouTubeUrl) {
-            return ResponseEntity.badRequest().body(ResponseMessages.INVALID_YOUTUBE_URL);
+            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.INVALID_YOUTUBE_URL);
         }
 
-        return  youTubeService.convertToMp3ORMp4(dto);
+        return youTubeService.convertToMp3ORMp4(dto);
     }
+
 
     @GetMapping("/download")
     public ResponseEntity<?> downloadFile(HttpServletRequest request ,@RequestParam String filename
@@ -88,7 +89,7 @@ public class YouTubeController {
         String requestHash = generateRequestHash(userIdentifier + ":" + filename);
 
         if (!downloadLimiter.tryDownload(requestHash)) {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(ResponseMessages.TOO_MANY_REQUESTS);
+            return ResponseUtils.httpStatus2ApiResponse(new HttpStatusAdapter(HttpStatus.TOO_MANY_REQUESTS));
         }
 
         Map<String, Object> stringObjectMap = youTubeService.downloadFile(filename);
@@ -107,7 +108,7 @@ public class YouTubeController {
         try {
             resource = new ByteArrayResource(Files.readAllBytes(path));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseUtils.httpStatus2ApiResponse(new HttpStatusAdapter(HttpStatus.INTERNAL_SERVER_ERROR));
         }
 
         // 設置響應頭

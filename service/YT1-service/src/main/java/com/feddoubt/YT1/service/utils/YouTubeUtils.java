@@ -1,6 +1,8 @@
 package com.feddoubt.YT1.service.utils;
 
 import com.feddoubt.YT1.config.ConfigProperties;
+import com.feddoubt.common.YT1.config.message.ApiResponse;
+import com.feddoubt.common.YT1.config.message.ResponseUtils;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -135,7 +138,8 @@ public class YouTubeUtils {
 
         String title = getVideoTitle(url);
         if(title.contains("ERROR")){
-            return ResponseEntity.badRequest().body(title);
+            ApiResponse<String> error = ResponseUtils.error(title);
+            return ResponseEntity.ok(error);
         }
         embedUrl(url);
 
