@@ -1,4 +1,4 @@
-package com.feddoubt.YT1.service.mq;
+package com.feddoubt.YT1.mq;
 
 import com.feddoubt.YT1.service.NotificationService;
 import lombok.extern.slf4j.Slf4j;

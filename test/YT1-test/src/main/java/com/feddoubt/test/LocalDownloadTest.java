@@ -38,7 +38,7 @@ public class LocalDownloadTest
 //        Map<String, Object> map = new HashMap<>();
 //        map.put("filename","【聽故事過節】#冬至 為什麼要 #吃湯圓 ？餛飩的由來竟然跟大美女 #西施 有關？｜小行星樂樂TV.mp3");
 //        map.put("output","【聽故事過節】#冬至 為什麼要 #吃湯圓 ？餛飩的由來竟然跟大美女 #西施 有關？｜小行星樂樂TV.mp4.webm");
-//        convertToMp3ORMp4(map);
+//        convertToMp3(map);
         boolean b = isValidYouTubeUrl("https://www.youtube.com/watch?v=fSbUGufOt8o");
         System.out.println(b);
     }
@@ -71,14 +71,14 @@ public class LocalDownloadTest
     private static final String videoPathtDirectory = outputDirectory + "output\\";
 
 
-    public static void convertToMp3ORMp4(Map<String, Object> map) throws IOException, InterruptedException {
+    public static void convertToMp3(Map<String, Object> map) throws IOException, InterruptedException {
         String outputPath = outputDirectory + (String) map.get("filename");
         String videoPath = videoPathtDirectory + (String) map.get("output");
 //        int totalSeconds = (int) map.get("duration");
 
         // 拼接输出路径
-        logger.info("convertToMp3ORMp4 videoPath:{}", videoPath);
-        logger.info("convertToMp3ORMp4 outputPath:{}", outputPath);
+        logger.info("convertToMp3 videoPath:{}", videoPath);
+        logger.info("convertToMp3 outputPath:{}", outputPath);
 
         File videoFile = new File(videoPath);
         if (!videoFile.exists()) {

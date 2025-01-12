@@ -36,12 +36,13 @@ public class ResponseUtils {
         return error(500, data); 
     }
 
-    public static ResponseEntity<?> httpStatus2ApiResponse(ApiStatus httpStatus){
-        int value = httpStatus.value();
-        String reasonPhrase = httpStatus.getReasonPhrase();
-        ApiResponse<Object> error = error(value, reasonPhrase);
-        return ResponseEntity.ok(error);
+    public static <T> ResponseEntity<ApiResponse<T>> httpStatus2ApiResponse(ApiStatus httpStatus){
+        return ResponseEntity.ok(
+                error(
+                        httpStatus.value(),
+                        httpStatus.getReasonPhrase()
+                )
+        );
     }
-
 
 }

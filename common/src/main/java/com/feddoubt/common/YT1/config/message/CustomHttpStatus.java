@@ -4,6 +4,8 @@ public enum CustomHttpStatus implements ApiStatus {
     URL_CANNOT_BE_NULL_OR_EMPTY(400,"URL cannot be null or empty"),
     INVALID_YOUTUBE_URL(400,"Invalid YouTube URL"),
     TOO_MANY_REQUESTS(429,"Too many requests. Please try again later"),
+    SERVER_ERROR(503,"服务器内部错误"),
+
     ;
 
     private final int value;

@@ -1,12 +1,22 @@
 package com.feddoubt.model.YT1.entity;
 
-//import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.io.Serializable;
 
 @Entity
 @Table(name = "download_logs")
-public class DownloadLog {
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+public class DownloadLog  implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,15 +37,13 @@ public class DownloadLog {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    public DownloadLog() {}
+    @Column(name = "title", nullable = false)
+    private String title;
 
-    public DownloadLog(String ipAddress, String url, String format, String userAgent, LocalDateTime createdAt) {
-        this.ipAddress = ipAddress;
-        this.url = url;
-        this.format = format;
-        this.userAgent = userAgent;
-        this.createdAt = createdAt;
-    }
+    @Column(name = "ext", nullable = false)
+    private String ext;
 
-    // Getters and Setters
+    @Column(name = "sanitized_title", nullable = false)
+    private String sanitizedTitle;
+
 }

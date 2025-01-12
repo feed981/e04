@@ -4,11 +4,9 @@ package com.feddoubt;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableAspectJAutoProxy
 //@MapperScan("com.feddoubt.YT1.mapper")
 public class YT1ServiceApplication
 {

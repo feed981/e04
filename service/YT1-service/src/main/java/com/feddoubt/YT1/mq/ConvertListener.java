@@ -1,7 +1,7 @@
-package com.feddoubt.YT1.service.mq;
+package com.feddoubt.YT1.mq;
 
-import com.feddoubt.YT1.service.utils.YouTubeUtils;
-import com.feddoubt.common.YT1.s3.S3Service;
+import com.feddoubt.YT1.service.YVCService;
+import com.feddoubt.model.YT1.pojos.VideoDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -17,7 +17,7 @@ import java.util.Map;
 public class ConvertListener {
 
     @Autowired
-    private YouTubeUtils youTubeUtils;
+    private YVCService yvcService;
 
 //    @Autowired
 //    private S3Service s3Service;
@@ -30,16 +30,18 @@ public class ConvertListener {
 
     @RabbitListener(queues = "${rabbitmq.convert-queue}")
     @Async
-    public void handleConvert(Map<String, Object> map) {
+    public void handleConvert(VideoDetails videoDetails) {
         try {
-            log.info("收到轉換任務: {}", map);
-            String videoPath = (String) map.get("output");
-            log.info("開始轉換: {}", videoPath);
-
+            log.info("收到轉換任務: {}", videoDetails);
             // 轉換邏輯
-            String result = youTubeUtils.convertToMp3ORMp4(map);
-            log.info("notificationQueue success:{}",result);
-            rabbitTemplate.convertAndSend("notificationQueue", result);
+            String filename = videoDetails.getDownloadFilename();
+
+            if(videoDetails.getConvertVideoPath().contains("mp3")) {
+                filename = yvcService.convertToMp3(videoDetails);
+            }
+
+            log.info("notificationQueue success:{}",filename);
+            rabbitTemplate.convertAndSend("notificationQueue", filename);
 //            if(!result.isEmpty()){
 //                s3Service.uploadFileToS3(videoPath);
 //            }
