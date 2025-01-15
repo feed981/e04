@@ -1,6 +1,5 @@
 package com.feddoubt.YT1.redis;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -11,8 +10,11 @@ public class DownloadLimiter {
 
     private static final long DUPLICATE_REQUEST_INTERVAL_MS = TimeUnit.SECONDS.toMillis(30); // 30秒
 
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
+
+    public DownloadLimiter(StringRedisTemplate stringRedisTemplate) {
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
 
     public boolean tryDownload(String requestHash) {
         long now = System.currentTimeMillis();

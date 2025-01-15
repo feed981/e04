@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface YVCRepository extends JpaRepository<DownloadLog, Long> {
+public interface DownloadLogRepository extends JpaRepository<DownloadLog, Long> {
     @Query(value = "SELECT d.ext " +
             "FROM DownloadLog d " +
             "WHERE d.title = :title " +

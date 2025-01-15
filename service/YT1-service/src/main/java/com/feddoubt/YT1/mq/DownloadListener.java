@@ -20,41 +20,23 @@ import java.util.Map;
 public class DownloadListener {
 
     private final RabbitTemplate rabbitTemplate;
+    private final YVCService yVCService;
+    private final RabbitResponse rabbitResponse;
 
-    public DownloadListener(RabbitTemplate rabbitTemplate) {
+    public DownloadListener(YVCService yVCService ,RabbitTemplate rabbitTemplate,RabbitResponse rabbitResponse) {
+        this.yVCService = yVCService;
         this.rabbitTemplate = rabbitTemplate;
+        this.rabbitResponse = rabbitResponse;
     }
-
-    @Autowired
-    private YVCService yvcService;
-
-    @Autowired
-    private RabbitResponse rabbitResponse;
 
     @RabbitListener(queues = "${rabbitmq.download-queue}")
     @Async
-    public void handleDownload(VideoDetails videoDetails) throws IOException {
-        log.info("開始執行異步下載任務...");
-
-        String command = videoDetails.getMessage();
-//        String output = (String) map.get("output");
-        log.info("處理下載命令: {}", command);
-
-        Process process = Runtime.getRuntime().exec(command);
-        yvcService.getProcessLog(process);
-
+    public void handleDownload(VideoDetails videoDetails) {
         try {
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                throw new IOException("下載失敗，退出碼: " + exitCode);
-            }
-            log.info("命令執行完成，退出碼: {}", exitCode);
-            log.info("下載完成，發送到轉換隊列...");
-            rabbitTemplate.convertAndSend("convertQueue", videoDetails);
-
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Process was interrupted", e);
+            log.info("開始執行異步下載任務...");
+            yVCService.originalFileNotExist(videoDetails);
+        } catch (Exception e) {
+            log.error("處理下載任務失敗", e);
         }
     }
 }

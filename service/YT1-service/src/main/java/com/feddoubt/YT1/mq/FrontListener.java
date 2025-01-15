@@ -11,22 +11,33 @@ import org.springframework.stereotype.Service;
 @Service
 public class FrontListener {
 
-    @Autowired
-    private NotificationService notificationService;
+    private final NotificationService notificationService;
+
+    public FrontListener(NotificationService notificationService){
+        this.notificationService = notificationService;
+    }
 
     @RabbitListener(queues = "${rabbitmq.embedUrl-queue}")
     @Async
     public void handleEmbedUrl(String message) {
-        log.info("message:{}",message);
-        // 推送消息到前端
-        notificationService.sendNotification("/topic/embedUrl", message);
+        try{
+            log.info("message:{}",message);
+            // 推送消息到前端
+            notificationService.sendNotification("/topic/embedUrl", message);
+        } catch (Exception e) {
+            log.error("推送embedUrl消息到前端任務失敗", e);
+        }
     }
 
     @RabbitListener(queues = "${rabbitmq.notification-queue}")
     @Async
     public void handleNotification(String message) {
-        log.info("message:{}",message);
-        // 推送消息到前端
-        notificationService.sendNotification("/topic/convert", message);
+        try{
+            log.info("message:{}",message);
+            // 推送消息到前端
+            notificationService.sendNotification("/topic/convert", message);
+        } catch (Exception e) {
+            log.error("convert未完成推送可下載消息到前端任務失敗", e);
+        }
     }
 }

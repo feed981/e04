@@ -28,7 +28,7 @@ public class AuthorizeFilter implements Ordered, GlobalFilter {
             return chain.filter(exchange);
         }
 
-        if (request.getURI().getPath().contains("/api/v1/YT1")) {
+        if (request.getURI().getPath().contains("/api/v1/yt1")) {
             return chain.filter(exchange);
         }
 

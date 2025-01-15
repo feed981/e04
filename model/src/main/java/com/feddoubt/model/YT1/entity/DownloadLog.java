@@ -15,12 +15,17 @@ import java.io.Serializable;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+// queue need Serializable
 public class DownloadLog  implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserLog userLog;
 
     @Column(name = "ip_address", nullable = false)
     private String ipAddress;
@@ -45,5 +50,8 @@ public class DownloadLog  implements Serializable {
 
     @Column(name = "sanitized_title", nullable = false)
     private String sanitizedTitle;
+
+    @Column
+    private Long uid;
 
 }

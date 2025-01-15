@@ -10,8 +10,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class RabbitResponse {
 
-    @Autowired
     private RabbitTemplate rabbitTemplate;
+
+    public RabbitResponse(RabbitTemplate rabbitTemplate){
+        this.rabbitTemplate = rabbitTemplate;
+    }
 
     public <T> ResponseEntity<ApiResponse<String>> queueMessageLog(String queueName, T t){
         try {

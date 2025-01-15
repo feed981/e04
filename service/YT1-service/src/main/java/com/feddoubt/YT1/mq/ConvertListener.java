@@ -16,15 +16,11 @@ import java.util.Map;
 @Service
 public class ConvertListener {
 
-    @Autowired
-    private YVCService yvcService;
-
-//    @Autowired
-//    private S3Service s3Service;
-
     private final RabbitTemplate rabbitTemplate;
+    private final YVCService yVCService;
 
-    public ConvertListener(RabbitTemplate rabbitTemplate) {
+    public ConvertListener(RabbitTemplate rabbitTemplate ,YVCService yVCService) {
+        this.yVCService = yVCService;
         this.rabbitTemplate = rabbitTemplate;
     }
 
@@ -33,15 +29,10 @@ public class ConvertListener {
     public void handleConvert(VideoDetails videoDetails) {
         try {
             log.info("收到轉換任務: {}", videoDetails);
-            // 轉換邏輯
-            String filename = videoDetails.getDownloadFilename();
 
             if(videoDetails.getConvertVideoPath().contains("mp3")) {
-                filename = yvcService.convertToMp3(videoDetails);
+                yVCService.convertToMp3(videoDetails);
             }
-
-            log.info("notificationQueue success:{}",filename);
-            rabbitTemplate.convertAndSend("notificationQueue", filename);
 //            if(!result.isEmpty()){
 //                s3Service.uploadFileToS3(videoPath);
 //            }

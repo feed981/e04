@@ -11,14 +11,28 @@ public class ConfigProperties {
     @Value("${ytdlp.path}")
     private String ytdlpPath;
 
+    @Value("${ytdlp.contain-name}")
+    private String ytdlpContainName;
+
+    @Value("${ffmpeg.contain-name}")
+    private String ffmpegContainName;
+
     @Value("${yt1.base-dir}")
     private String yt1BaseDir;
 
-    public String getYtdlpPath() {
+    public String getytdlpPath() {
         return ytdlpPath;
     }
 
-    public String getYt1BaseDir() {
+    public String getytdlpContainName() {
+        return ytdlpContainName;
+    }
+
+    public String getffmpegContainName() {
+        return ffmpegContainName;
+    }
+
+    public String getyt1BaseDir() {
         return yt1BaseDir;
     }
 }
