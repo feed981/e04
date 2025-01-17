@@ -8,6 +8,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class ConfigProperties {
 
+    @Value("${vagrant.id}")
+    private String vagrantId;
+
     @Value("${ytdlp.path}")
     private String ytdlpPath;
 
@@ -20,19 +23,24 @@ public class ConfigProperties {
     @Value("${yt1.base-dir}")
     private String yt1BaseDir;
 
-    public String getytdlpPath() {
+
+    public String getVagrantId() {
+        return vagrantId;
+    }
+
+    public String getYtdlpPath() {
         return ytdlpPath;
     }
 
-    public String getytdlpContainName() {
+    public String getYtdlpContainName() {
         return ytdlpContainName;
     }
 
-    public String getffmpegContainName() {
+    public String getFfmpegContainName() {
         return ffmpegContainName;
     }
 
-    public String getyt1BaseDir() {
+    public String getYt1BaseDir() {
         return yt1BaseDir;
     }
 }

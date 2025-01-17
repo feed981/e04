@@ -1,7 +1,9 @@
 package com.feddoubt.YT1.mq;
 
 import com.feddoubt.YT1.service.YVCService;
+import com.feddoubt.YT1.utils.ProcessUtils;
 import com.feddoubt.common.YT1.config.message.RabbitResponse;
+import com.feddoubt.model.YT1.entity.DownloadLog;
 import com.feddoubt.model.YT1.pojos.VideoDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -19,22 +21,21 @@ import java.util.Map;
 @Service
 public class DownloadListener {
 
-    private final RabbitTemplate rabbitTemplate;
-    private final YVCService yVCService;
-    private final RabbitResponse rabbitResponse;
+    private final ProcessUtils processUtils;
 
-    public DownloadListener(YVCService yVCService ,RabbitTemplate rabbitTemplate,RabbitResponse rabbitResponse) {
-        this.yVCService = yVCService;
-        this.rabbitTemplate = rabbitTemplate;
-        this.rabbitResponse = rabbitResponse;
+    public DownloadListener(ProcessUtils processUtils) {
+        this.processUtils = processUtils;
     }
 
     @RabbitListener(queues = "${rabbitmq.download-queue}")
     @Async
-    public void handleDownload(VideoDetails videoDetails) {
+    public void handleDownload(DownloadLog downloadLog) {
         try {
+            log.info("異步下載任務前檢查...");
+            VideoDetails videoDetails = processUtils.beforeProcessVideoDownload(downloadLog);
+            String url = videoDetails.getUrl();
             log.info("開始執行異步下載任務...");
-            yVCService.originalFileNotExist(videoDetails);
+            processUtils.processVideoDownload(url);
         } catch (Exception e) {
             log.error("處理下載任務失敗", e);
         }

@@ -1,20 +1,15 @@
 package com.feddoubt.YT1.controller.v1;
 
 import com.feddoubt.YT1.redis.RedisIdWorker;
-import com.feddoubt.YT1.service.IpGeolocationService;
-import com.feddoubt.YT1.service.UserLogService;
-import com.feddoubt.model.YT1.dtos.LocationInfoDto;
 import com.feddoubt.model.YT1.entity.DownloadLog;
-import com.feddoubt.model.YT1.entity.UserLog;
 import com.feddoubt.model.YT1.pojos.DownloadFileDetails;
 import com.feddoubt.YT1.service.YVCService;
 import com.feddoubt.YT1.redis.DownloadLimiter;
 import com.feddoubt.YT1.utils.HashUtils;
-import com.feddoubt.YT1.utils.UserUtils;
+import com.feddoubt.YT1.utils.ClientUtils;
 import com.feddoubt.common.YT1.config.message.*;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -33,7 +28,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Slf4j
 @RestController
@@ -41,22 +35,18 @@ import java.util.List;
 public class YouTubeController {
 
     private final YVCService yVCService;
-    private final UserLogService userLogService;
-    private final IpGeolocationService ipGeolocationService;
     private final DownloadLimiter downloadLimiter;
-    private final UserUtils userUtils;
+    private final ClientUtils clientUtils;
     private final HashUtils hashUtils;
     private final RedisIdWorker redisIdWorker;
     
-    public YouTubeController(YVCService yVCService ,UserLogService userLogService, IpGeolocationService ipGeolocationService,
+    public YouTubeController(YVCService yVCService ,
                              DownloadLimiter downloadLimiter,
-                             UserUtils userUtils,HashUtils hashUtils ,
+                             ClientUtils clientUtils, HashUtils hashUtils ,
                              RedisIdWorker redisIdWorker) {
         this.yVCService = yVCService;
-        this.userLogService = userLogService;
-        this.ipGeolocationService = ipGeolocationService;
         this.downloadLimiter = downloadLimiter;
-        this.userUtils = userUtils;
+        this.clientUtils = clientUtils;
         this.hashUtils = hashUtils;
         this.redisIdWorker = redisIdWorker;
     }
@@ -71,23 +61,22 @@ public class YouTubeController {
             return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.INVALID_YOUTUBE_URL);
         }
 
-        String userIdentifier = userUtils.getUserIdentifier(request);
+        String ip = clientUtils.getIp();
         DownloadLog downloadLog = new DownloadLog();
-        downloadLog.setIpAddress(userIdentifier);
+        downloadLog.setIpAddress(ip);
         downloadLog.setUserAgent(request.getHeader("User-Agent"));
         downloadLog.setUrl(url);
         downloadLog.setFormat(dto.getFormat());
         downloadLog.setCreatedAt(LocalDateTime.now());
-        downloadLog.setUid(redisIdWorker.nextId("convert:" + userIdentifier));
+        downloadLog.setUid(redisIdWorker.nextId("convert:" + ip));
         return yVCService.downloadVideoByUrl(downloadLog);
     }
 
 
     @GetMapping("/download")
     public ResponseEntity<?> downloadFile(HttpServletRequest request ,@RequestParam String filename) throws IOException{
-
-        String userIdentifier = userUtils.getUserIdentifier(request);
-        String requestHash = hashUtils.generateRequestHash(userIdentifier + ":" + filename);
+        String ip = clientUtils.getIp();
+        String requestHash = hashUtils.generateRequestHash(ip + ":" + filename);
 
         log.info("filename:{}",filename);
 
@@ -120,28 +109,6 @@ public class YouTubeController {
                 .contentType(MediaType.parseMediaType(mimeType))
                 .contentLength(file.length())
                 .body(resource);
-    }
-
-    @PostMapping("/location")
-    public void handleLocation(HttpServletRequest request ,@RequestBody LocationInfoDto locationInfoDto) {
-        String userIdentifier = userUtils.getUserIdentifier(request);
-        Long byIpAddress = userLogService.findByIpAddress(userIdentifier);
-        if(byIpAddress != null){
-            log.info("ip exist:{}",byIpAddress);
-            return;
-        }
-
-        UserLog userLog = new UserLog();
-        userLog.setIpAddress(userIdentifier);
-        userLog.setUid(redisIdWorker.nextId("location:" + userIdentifier));
-        userLog.setCreatedAt(LocalDateTime.now());
-        userLog.setLatitude(locationInfoDto.getLatitude());
-        userLog.setLongitude(locationInfoDto.getLongitude());
-        userLog.setMethod("Geolocation API");
-        userLogService.saveUserLog(userLog);
-            // method2: ipinfo
-//            ipGeolocationService.getLocationByIp(userLog);
-
     }
 
 }

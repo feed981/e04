@@ -16,15 +16,14 @@ public class RabbitResponse {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public <T> ResponseEntity<ApiResponse<String>> queueMessageLog(String queueName, T t){
+    public <T> ApiResponse<String> queueMessageLog(String queueName, T t){
         try {
             rabbitTemplate.convertAndSend(queueName, t);
             log.info("{} Message sent to the queue successfully.",queueName);
-            return null;
+            return ResponseUtils.success();
         } catch (Exception e) {
             log.error("Failed to send message to the queue: {}", e.getMessage());
-            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
-            // 这里你可以做更多的错误处理，如重试机制或通知系统
+            return ResponseUtils.error();
         }
     }
 }

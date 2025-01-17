@@ -36,6 +36,10 @@ public class ResponseUtils {
         return error(500, data); 
     }
 
+    public static <T> ApiResponse<T> error() {
+        return ApiResponse.<T>builder().code(500).success(false).build();
+    }
+
     public static <T> ResponseEntity<ApiResponse<T>> httpStatus2ApiResponse(ApiStatus httpStatus){
         return ResponseEntity.ok(
                 error(

@@ -1,11 +1,9 @@
-package com.feddoubt.YT1.service;
+package com.feddoubt.YT1.service.loc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.feddoubt.YT1.redis.DownloadLimiter;
-import com.feddoubt.YT1.redis.RedisIdWorker;
-import com.feddoubt.YT1.utils.HashUtils;
-import com.feddoubt.YT1.utils.UserUtils;
+import com.feddoubt.YT1.service.UserLogService;
+import com.feddoubt.common.YT1.config.message.CustomHttpStatus;
 import com.feddoubt.common.YT1.config.message.ResponseUtils;
 import com.feddoubt.model.YT1.entity.UserLog;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +24,9 @@ public class IpGeolocationService {
     private final UserLogService userLogService;
 
     public IpGeolocationService(UserLogService userLogService) {
+
         this.userLogService = userLogService;
+
     }
 
     /**
@@ -45,39 +45,42 @@ public class IpGeolocationService {
      * loc 但 IP 地理定位不准确
      * IP 地理定位的精度通常受到多种因素的影响，包括网络结构、使用环境以及数据库的准确性。因此，出现 6 公里左右的误差并不罕见
      */
-    private static final String API_URL = "http://ipinfo.io/{ip}/json";
+    private static final String ipinfoAPI_URL = "http://ipinfo.io/{ip}/json";
 
 
-    public void getLocationByIp(UserLog userLog) {
+    // 經緯度
+    public ResponseEntity<?> getLocationByIp(UserLog userLog) {
         String ipAddress = userLog.getIpAddress();
         RestTemplate restTemplate = new RestTemplate();
-        
         // 生成 URL 並查詢 API
-        String url = UriComponentsBuilder.fromUriString(API_URL)
-                                        .buildAndExpand(ipAddress)
-                                        .toUriString();
-
+        String url = UriComponentsBuilder.fromUriString(ipinfoAPI_URL)
+                                            .buildAndExpand(ipAddress)
+                                            .toUriString();
         // 發送請求，解析返回的 JSON
         String response = restTemplate.getForObject(url, String.class);
 
         if(response == null){
-            return;
+            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
         }
+
         ObjectMapper objectMapper = new ObjectMapper();
 
         try {
             JsonNode jsonNode = objectMapper.readTree(response);
+            log.info("response:{}",response);
             String loc = jsonNode.get("loc").asText();
             if(loc.contains(",")){
-                userLog.setLatitude(BigDecimal.valueOf(Long.parseLong(loc.split(",")[0])));
-                userLog.setLongitude(BigDecimal.valueOf(Long.parseLong(loc.split(",")[1])));
+                userLog.setLatitude(new BigDecimal(loc.split(",")[0]));
+                userLog.setLongitude(new BigDecimal(loc.split(",")[1]));
+                userLog.setCreatedAt(LocalDateTime.now());
+                userLog.setMethod(ipinfoAPI_URL);
+                userLogService.saveUserLog(userLog);
             }
-            userLog.setCreatedAt(LocalDateTime.now());
-            userLog.setMethod(API_URL);
-            userLogService.saveUserLog(userLog);
-
         } catch (Exception e) {
             log.error(e.getMessage());
+            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
         }
+
+        return ResponseEntity.ok(ResponseUtils.success());
     }
 }

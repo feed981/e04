@@ -1,14 +1,11 @@
 package com.feddoubt.YT1.mq;
 
 import com.feddoubt.YT1.service.DownloadLogService;
-import com.feddoubt.YT1.service.IpGeolocationService;
 import com.feddoubt.YT1.service.UserLogService;
-import com.feddoubt.YT1.service.YVCService;
 import com.feddoubt.model.YT1.entity.DownloadLog;
 import com.feddoubt.model.YT1.entity.UserLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +30,6 @@ public class LogListener {
             UserLog userLog = new UserLog();
             userLog.setId(byIpAddress);
             downloadLog.setUserLog(userLog);
-            log.info("downloadLog:{}",downloadLog);
             downloadLogService.saveDownloadLog(downloadLog);
         } catch (Exception e) {
             log.error("存儲數據庫任務失敗", e);

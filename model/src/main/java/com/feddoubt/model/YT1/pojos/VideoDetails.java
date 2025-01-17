@@ -3,17 +3,21 @@ package com.feddoubt.model.YT1.pojos;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 @Data
 public class VideoDetails implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private String url;
+    private String videoId;
     private String title;
     private String sanitizedTitle;
     private String ext;
+    private BigDecimal duration;
     private String format;
     private String message;
+    private String errorMessage;
     private String downloadFilename;
     private String downloadVideoPath;
     private String convertFilename;
@@ -27,19 +31,11 @@ public class VideoDetails implements Serializable {
         }
     }
 
-    public String setDownloadFilename() {
-        return this.downloadFilename = this.title + this.ext;
+    public void setDownloadFilename() {
+        this.downloadFilename = this.title + this.ext;
     }
 
-    public String setDownloadVideoPath(String downloadVideoPath) {
-        return this.downloadVideoPath = downloadVideoPath;
-    }
-
-    public String setConvertFilename() {
-        return this.convertFilename = this.title + "." + this.format;
-    }
-
-    public String setConvertVideoPath(String convertVideoPath) {
-        return this.convertVideoPath = convertVideoPath;
+    public void setConvertFilename() {
+        this.convertFilename = this.title + "." + this.format;
     }
 }

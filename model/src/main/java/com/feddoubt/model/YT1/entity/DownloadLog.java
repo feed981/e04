@@ -48,9 +48,6 @@ public class DownloadLog  implements Serializable {
     @Column(name = "ext", nullable = false)
     private String ext;
 
-    @Column(name = "sanitized_title", nullable = false)
-    private String sanitizedTitle;
-
     @Column
     private Long uid;
 
