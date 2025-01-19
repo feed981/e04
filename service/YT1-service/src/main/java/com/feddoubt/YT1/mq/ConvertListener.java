@@ -1,45 +1,60 @@
 package com.feddoubt.YT1.mq;
 
-import com.feddoubt.YT1.service.YVCService;
+import com.feddoubt.YT1.utils.ProcessUtils;
+import com.feddoubt.model.YT1.entity.DownloadLog;
 import com.feddoubt.model.YT1.pojos.VideoDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 
-import java.util.Map;
+import java.io.File;
 
 @Slf4j
 @Service
 public class ConvertListener {
 
-    private final RabbitTemplate rabbitTemplate;
-    private final YVCService yVCService;
+    private final ProcessUtils processUtils;
+    private RabbitTemplate rabbitTemplate;
 
-    public ConvertListener(RabbitTemplate rabbitTemplate ,YVCService yVCService) {
-        this.yVCService = yVCService;
+    public ConvertListener(ProcessUtils processUtils , RabbitTemplate rabbitTemplate){
         this.rabbitTemplate = rabbitTemplate;
+        this.processUtils = processUtils;
     }
+
 
     @RabbitListener(queues = "${rabbitmq.convert-queue}")
-    @Async
-    public void handleConvert(VideoDetails videoDetails) {
+    public void handleConvert(DownloadLog downloadLog) {
         try {
-            log.info("收到轉換任務: {}", videoDetails);
+            log.info("異步下載任務前檢查...");
+            VideoDetails videoDetails = processUtils.dumpjson(downloadLog);
 
-            if(videoDetails.getConvertVideoPath().contains("mp3")) {
-                yVCService.convertToMp3(videoDetails);
+            log.info("下載任務前檔案是否存在...");
+            String url = videoDetails.getUrl();
+            String title = videoDetails.getTitle();
+            String path = videoDetails.getPath();
+            log.info("base dir path:{}",path);
+
+            if(!new File(path + ".mp4").exists()){
+                log.info("開始執行mp4下載任務...");
+                processUtils.mergeoutput(url ,title);
             }
-//            if(!result.isEmpty()){
-//                s3Service.uploadFileToS3(videoPath);
-//            }
+
+            String format = videoDetails.getFormat();
+            if(format.equals("mp3")){
+                if(!new File(path + ".mp3").exists()) {
+                    log.info("開始執行mp3轉換任務...");
+                    processUtils.ffmpegmp3(title);
+                }
+            }
+
+            log.info("開始通知任務.  ..");
+            String filename = title + format;
+            rabbitTemplate.convertAndSend("notificationQueue", filename);
 
         } catch (Exception e) {
-            log.error("處理轉換任務失敗", e);
+            log.error("處理下載任務失敗", e);
         }
     }
-
 }

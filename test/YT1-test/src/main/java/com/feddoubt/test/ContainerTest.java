@@ -3,7 +3,6 @@ package com.feddoubt.test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.feddoubt.model.YT1.pojos.VideoDetails;
-import com.feddoubt.model.YT1.pojos.YtdlpDumpjson;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -17,14 +16,82 @@ import java.util.List;
 
 public class ContainerTest {
     private static final String vagrantfile = "D:\\VirtualBox VMs\\vagrant-ubuntu";
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
 //        isRunningInVagrant();
         // 測試容器狀態
 //        boolean isRunning = isContainerRunning("ytdlp-container");
 //        System.out.println("Container is running: " + isRunning);
-        ytdlp();
+//        ytdlp();
+//        mergeoutput("https://www.youtube.com/watch?v=5sNN3aslwHg");
+        ffmpegmp3("walker");
     }
 
+    public static List<String> dockerCommand(String dockerCommand){
+        List<String> command = new ArrayList<>();
+        command.add("vagrant");
+        command.add("ssh");
+        command.add("0d36b1c");
+        command.add("-c");
+        command.add(dockerCommand);
+        return command;
+    }
+
+    public static void commonProcess(List<String> command) throws IOException, InterruptedException {
+        System.out.println("Executing command: {}"+ String.join(" ", command));
+
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        processBuilder.redirectErrorStream(true);
+        Process process = processBuilder.start();
+
+        // 非阻塞讀取輸出
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        }
+
+        // 发现已经下载过相同的文件，它通常会退出并返回 exitCode = 1，表示操作未成功，因为它认为下载的文件已经存在
+        int exitCode = process.waitFor();
+        System.out.println("Command completed with exit code: {}"+exitCode);
+
+        if (exitCode != 0) {
+            throw new RuntimeException("Download failed with exit code: " + exitCode);
+        }
+    }
+
+
+    public static void ffmpegmp3(String title) throws IOException, InterruptedException {
+        commonProcess(
+                dockerCommand(String.format("sudo docker compose run --rm ffmpeg -i '/downloads/%s.mp4' -q:a 0 -map a '/downloads/%s.mp3'",title ,title))
+        );
+    }
+
+    public static void mergeoutput(String url) throws IOException, InterruptedException {
+        List<String> command = dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o '/downloads/%%(title)s' '%s'",url));
+        System.out.println(String.format("Executing command: %s", String.join(" ", command)));
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        processBuilder.redirectErrorStream(true);
+        Process process = processBuilder.start();
+
+        // 非阻塞讀取輸出
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        }
+
+        int exitCode = process.waitFor();
+        System.out.println(String.format("Command completed with exit code: %s", exitCode));
+
+        if (exitCode != 0) {
+            throw new RuntimeException("Download failed with exit code: " + exitCode);
+        }
+        System.out.println("downloadVideo end................");
+    }
 
 
     private static void ytdlp() throws IOException {

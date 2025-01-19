@@ -1,8 +1,7 @@
-package com.feddoubt.YT1.service.loc;
+package com.feddoubt.YT1.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.feddoubt.YT1.service.UserLogService;
 import com.feddoubt.common.YT1.config.message.CustomHttpStatus;
 import com.feddoubt.common.YT1.config.message.ResponseUtils;
 import com.feddoubt.model.YT1.entity.UserLog;
@@ -24,9 +23,7 @@ public class IpGeolocationService {
     private final UserLogService userLogService;
 
     public IpGeolocationService(UserLogService userLogService) {
-
         this.userLogService = userLogService;
-
     }
 
     /**
@@ -47,9 +44,8 @@ public class IpGeolocationService {
      */
     private static final String ipinfoAPI_URL = "http://ipinfo.io/{ip}/json";
 
-
     // 經緯度
-    public ResponseEntity<?> getLocationByIp(UserLog userLog) {
+    public void getLocationByIp(UserLog userLog) {
         String ipAddress = userLog.getIpAddress();
         RestTemplate restTemplate = new RestTemplate();
         // 生成 URL 並查詢 API
@@ -59,28 +55,23 @@ public class IpGeolocationService {
         // 發送請求，解析返回的 JSON
         String response = restTemplate.getForObject(url, String.class);
 
-        if(response == null){
-            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
-        }
+        if(response != null){
+            ObjectMapper objectMapper = new ObjectMapper();
 
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        try {
-            JsonNode jsonNode = objectMapper.readTree(response);
-            log.info("response:{}",response);
-            String loc = jsonNode.get("loc").asText();
-            if(loc.contains(",")){
-                userLog.setLatitude(new BigDecimal(loc.split(",")[0]));
-                userLog.setLongitude(new BigDecimal(loc.split(",")[1]));
-                userLog.setCreatedAt(LocalDateTime.now());
-                userLog.setMethod(ipinfoAPI_URL);
-                userLogService.saveUserLog(userLog);
+            try {
+                JsonNode jsonNode = objectMapper.readTree(response);
+                log.info("response:{}",response);
+                String loc = jsonNode.get("loc").asText();
+                if(loc.contains(",")){
+                    userLog.setLatitude(new BigDecimal(loc.split(",")[0]));
+                    userLog.setLongitude(new BigDecimal(loc.split(",")[1]));
+                    userLog.setCreatedAt(LocalDateTime.now());
+                    userLog.setMethod(ipinfoAPI_URL);
+                    userLogService.saveUserLog(userLog);
+                }
+            } catch (Exception e) {
+                log.error(e.getMessage());
             }
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
         }
-
-        return ResponseEntity.ok(ResponseUtils.success());
     }
 }

@@ -69,7 +69,7 @@ public class YouTubeController {
         downloadLog.setFormat(dto.getFormat());
         downloadLog.setCreatedAt(LocalDateTime.now());
         downloadLog.setUid(redisIdWorker.nextId("convert:" + ip));
-        return yVCService.downloadVideoByUrl(downloadLog);
+        return yVCService.convert(downloadLog);
     }
 
 
@@ -84,7 +84,7 @@ public class YouTubeController {
             return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.TOO_MANY_REQUESTS);
         }
 
-        DownloadFileDetails downloadFileDetails = yVCService.downloadFile(filename);
+        DownloadFileDetails downloadFileDetails = yVCService.download(filename);
 
         String filePath = downloadFileDetails.getPath();
         String mimeType = downloadFileDetails.getMimeType();

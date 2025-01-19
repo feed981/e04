@@ -18,7 +18,6 @@ public class FrontListener {
     }
 
     @RabbitListener(queues = "${rabbitmq.embedUrl-queue}")
-    @Async
     public void handleEmbedUrl(String message) {
         try{
             log.info("message:{}",message);
@@ -30,7 +29,6 @@ public class FrontListener {
     }
 
     @RabbitListener(queues = "${rabbitmq.notification-queue}")
-    @Async
     public void handleNotification(String message) {
         try{
             log.info("message:{}",message);

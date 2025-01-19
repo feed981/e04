@@ -5,6 +5,9 @@ import com.feddoubt.common.YT1.config.message.RabbitResponse;
 import com.feddoubt.model.YT1.entity.UserLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,8 +26,10 @@ public class UserLogService {
         this.userLogRepository = userLogRepository;
     }
 
-    public Long findByIpAddress(String ipAddredd){
-        return userLogRepository.findByIpAddress(ipAddredd).orElse(null);
+    public UserLog findByIpAddress(String ipAddress){
+        Pageable pageable = PageRequest.of(0, 1);
+        Page<UserLog> result = userLogRepository.findByIpAddress(ipAddress, pageable);
+        return result.isEmpty() ? null : result.getContent().get(0);
     }
 
     public void saveUserLog(UserLog userLog){

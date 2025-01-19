@@ -8,10 +8,7 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
 
     // 創建下載隊列，參數：隊列名稱，是否持久化
-    @Bean
-    public Queue downloadQueue() {
-        return new Queue("downloadQueue", true);
-    }
+
 
     @Bean
     public Queue convertQueue() {
@@ -21,8 +18,8 @@ public class RabbitMQConfig {
     @Bean
     public Queue downloadLogQueue() { return new Queue("downloadLogQueue", true); }
 
-//    @Bean
-//    public Queue userLogQueue() { return new Queue("userLogQueue", true); }
+    @Bean
+    public Queue userLogQueue() { return new Queue("userLogQueue", true); }
 
     @Bean
     public Queue notificationQueue() {

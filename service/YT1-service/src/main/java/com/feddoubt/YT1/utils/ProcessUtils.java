@@ -28,49 +28,51 @@ import java.util.List;
 public class ProcessUtils {
 
     private final ConfigProperties configProperties;
-    private final RabbitResponse rabbitResponse;
     private RabbitTemplate rabbitTemplate;
 
-    public ProcessUtils(ConfigProperties configProperties, RabbitTemplate rabbitTemplate, RabbitResponse rabbitResponse) {
+    public ProcessUtils(ConfigProperties configProperties, RabbitTemplate rabbitTemplate) {
         this.configProperties = configProperties;
-        this.rabbitResponse = rabbitResponse;
         this.rabbitTemplate = rabbitTemplate;
     }
 
     private String vagrantId;
-    private String yt1baseDir;
-    private String ytdlpContainerName;
-    private String ffmpegContainerName;
+    private String yt1BaseDir;
 
     @PostConstruct
     public void init() {
         this.vagrantId = configProperties.getVagrantId();
-        this.yt1baseDir = configProperties.getYt1BaseDir();
-        this.ytdlpContainerName = configProperties.getYtdlpContainName();
-        this.ffmpegContainerName = configProperties.getFfmpegContainName();
+        this.yt1BaseDir = configProperties.getYt1BaseDir();
     }
 
     private static final String vagrantfile = "D:\\VirtualBox VMs\\vagrant-ubuntu";
 
+
+    //避免這些字符導致文件創建失敗
+    private String cleanTitle(String title) {
+        return title.replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    public List<String> dockerCommand(String dockerCommand){
+        List<String> command = new ArrayList<>();
+        command.add("vagrant");
+        command.add("ssh");
+        command.add(vagrantId);
+        command.add("-c");
+        command.add(dockerCommand);
+        return command;
+    }
     /**
      * vagrant global-status
      * id       name    provider   state   directory
      * ------------------------------------------------------------------------
      * 0d36b1c  default virtualbox running D:/VirtualBox VMs/vagrant-ubuntu
      */
-    public VideoDetails beforeProcessVideoDownload(DownloadLog downloadLog) throws IOException, InterruptedException {
+    public VideoDetails dumpjson(DownloadLog downloadLog) throws IOException, InterruptedException {
         VideoDetails videoDetails = new VideoDetails();
         String url = downloadLog.getUrl();
         videoDetails.setUrl(url);
         videoDetails.setFormat(downloadLog.getFormat());
-        //sudo docker compose run ytdlp --dump-json "https://www.youtube.com/watch?v=RhSJ3AGQLkM" | jq '{id, title, ext, duration}'
-        List<String> command = new ArrayList<>();
-        command.add("vagrant");
-        command.add("ssh");
-        command.add(vagrantId);
-        command.add("-c");
-        String dockerCommand = String.format("sudo docker compose run ytdlp --dump-json '%s' | jq '{id, title, ext, duration}'", url);
-        command.add(dockerCommand);
+        List<String> command = dockerCommand(String.format("sudo docker compose run ytdlp --dump-json '%s' | jq '{id, title, ext, duration}'", url));
         log.info("Executing command: {}", String.join(" ", command));
 
         ProcessBuilder processBuilder = new ProcessBuilder(command);
@@ -114,7 +116,7 @@ public class ProcessUtils {
             // 解析 JSON 輸出
             try {
                 JSONObject json = new JSONObject(stringBuilder.toString());
-                BigDecimal duration = new BigDecimal(json.getString("duration"));
+                BigDecimal duration = new BigDecimal(json.getInt("duration"));
                 // 超過10分鐘
                 if(duration.compareTo(new BigDecimal(600)) > 0){
                     videoDetails.setErrorMessage("video length too long");
@@ -128,10 +130,7 @@ public class ProcessUtils {
                 videoDetails.setTitle(sanitizedTitle);
                 videoDetails.setExt(ext);
                 videoDetails.setDuration(duration);
-                videoDetails.setConvertFilename();
-                videoDetails.setDownloadFilename();
-                videoDetails.setConvertVideoPath(yt1baseDir + videoDetails.getConvertFilename());
-                videoDetails.setDownloadVideoPath(yt1baseDir + sanitizedTitle + ext);
+                videoDetails.setPath(yt1BaseDir);
 
                 downloadLog.setTitle(title);
                 downloadLog.setExt(ext);
@@ -149,25 +148,8 @@ public class ProcessUtils {
         }
     }
 
-    //避免這些字符導致文件創建失敗
-    private String cleanTitle(String title) {
-        return title.replaceAll("[\\\\/:*?\"<>|]", "_");
-    }
 
-    /**
-     *     mp4: sudo docker compose run ytdlp -- yt-dlp -f "bestaudio" --extract-audio --audio-format mp3 -o "/downloads/%(title)s.%(ext)s" "https://www.youtube.com/watch?v=mnsqi3lQNbY"
-     *     mp4: sudo docker compose run ytdlp -- yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o "/downloads/%(title)s.%(ext)s" "https://www.youtube.com/watch?v=mnsqi3lQNbY"
-     *
-     *     mp3: sudo docker compose run --rm ffmpeg -i "/downloads/Gran Turismo 5 OST： Yuki Oike - Passion [mnsqi3lQNbY].mp4" -q:a 0 -map a "/downloads/output.mp3"
-     */
-    public void processVideoDownload(String url) throws IOException, InterruptedException {
-        List<String> command = new ArrayList<>();
-        command.add("vagrant");
-        command.add("ssh");
-        command.add(vagrantId);
-        command.add("-c");
-        String dockerCommand = String.format("sudo docker compose run ytdlp -- yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o '/downloads/%(title)s' '%s'",url);
-        command.add(dockerCommand);
+    public void commonProcess(List<String> command) throws IOException, InterruptedException {
         log.info("Executing command: {}", String.join(" ", command));
 
         ProcessBuilder processBuilder = new ProcessBuilder(command);
@@ -183,41 +165,28 @@ public class ProcessUtils {
             }
         }
 
+        // 发现已经下载过相同的文件，它通常会退出并返回 exitCode = 1，表示操作未成功，因为它认为下载的文件已经存在
         int exitCode = process.waitFor();
         log.info("Command completed with exit code: {}", exitCode);
 
         if (exitCode != 0) {
             throw new RuntimeException("Download failed with exit code: " + exitCode);
         }
-        log.info("downloadVideo end................");
     }
 
-    // ytdlp , ffmepg
-    public <T> ApiResponse<String> commonProcess(String dockerCommand , String logstr, String queue , T t) {
-        log.info("dockerCommand:{}",dockerCommand);
-
-        try {
-            Process process = Runtime.getRuntime().exec(dockerCommand);
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    log.info(line);
-                }
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                throw new IOException("下載失敗，退出碼: " + exitCode);
-            }
-            log.info("命令執行完成，退出碼: {}", exitCode);
-            log.info(String.format("下載完成，發送到%s隊列...",logstr));
-            return rabbitResponse.queueMessageLog(queue, t);
-
-        } catch (InterruptedException | IOException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        }
-
+    public void mergeoutput(String url ,String title) throws IOException, InterruptedException {
+        commonProcess(
+//            dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -o '/downloads/%(title)s.mp4' '%s'",title ,url))
+//            dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -o '/downloads/%s.mp4' --no-mtime '%s'",title ,url))
+//            dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o '/downloads/%s.mp4' '%s'",title ,url))
+//            dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -f 'bestvideo[ext=mp4]+bestaudio[ext=m4a]' --merge-output-format mp4 --output '/downloads/%s.mp4' --no-keep-video --restrict-filenames '%s'",title ,url))
+                dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp --config-location /config/yt-dlp.conf -o '%s'" ,url))
+        );
     }
 
+    public void ffmpegmp3(String title) throws IOException, InterruptedException {
+        commonProcess(
+            dockerCommand(String.format("sudo docker compose run --rm ffmpeg -i '/downloads/%s.mp4' -q:a 0 -map a '/downloads/%s.mp3'",title ,title))
+        );
+    }
 }

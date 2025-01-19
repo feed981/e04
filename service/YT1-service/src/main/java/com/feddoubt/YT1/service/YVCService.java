@@ -32,10 +32,18 @@ public class YVCService {
 
     private final RabbitResponse rabbitResponse;
     private final ProcessUtils processUtils;
-
-    public YVCService(RabbitResponse rabbitResponse ,ProcessUtils processUtils) {
+    private final ConfigProperties configProperties;
+    public YVCService(RabbitResponse rabbitResponse ,ProcessUtils processUtils ,ConfigProperties configProperties) {
         this.rabbitResponse = rabbitResponse;
         this.processUtils = processUtils;
+        this.configProperties = configProperties;
+    }
+
+    private String yt1BaseDir;
+
+    @PostConstruct
+    public void init() {
+        this.yt1BaseDir = configProperties.getYt1BaseDir();
     }
 
     private final static String patternYoutubeUrl = "^https?://(www\\.)?youtube\\.com/watch\\?v=.*$";
@@ -70,105 +78,33 @@ public class YVCService {
      * 運行時間不確定：處理視頻長短和解析度不同，運行時間可能變化較大。
      * 可能的併發需求：如果需要處理多個視頻，系統負載會迅速增長。
      */
-    public ResponseEntity<?> downloadVideoByUrl(DownloadLog downloadLog) throws Exception {
+    public ResponseEntity<?> convert(DownloadLog downloadLog) throws Exception {
         String url = downloadLog.getUrl();
-
-        if (!rabbitResponse.queueMessageLog("downloadQueue", downloadLog).isSuccess()) {
-            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
-        }
-
-        // 1-1. queue: db download log
-        if (!rabbitResponse.queueMessageLog("downloadLogQueue", downloadLog).isSuccess()) {
-            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
-        }
-
-        // 1-2. queue: frontend embed Url
         if (!embedUrl(url).isSuccess()) {
             return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
         }
-        return null;
-//        return convertByFormat(videoDetails);
-    }
-
-
-    // 1-5. 原始檔案未下載過
-    public ApiResponse<String> originalFileNotExist(VideoDetails videoDetails) throws IOException {
-        String url = videoDetails.getUrl();
-
-        if (!new File(downloadVideoPath).exists()) {
-            log.info("not download");
-            // window
-            // String command = String.format("%s -o \"%s\" %s", ytdlp, downloadVideoPath, url);
-
-            return null;
-//            return processUtils.commonProcess(
-//                    String.format("docker exec %s yt-dlp -o \"%s\" %s", ytdlpContainName, downloadVideoPath, url) ,
-//                    "轉換","convertQueue" , videoDetails);
-
-        }
-        return ResponseUtils.success();
-    }
-
-    public ResponseEntity<?> convertByFormat(VideoDetails videoDetails){
-        String format = videoDetails.getFormat();
-        String downloadVideoPath = videoDetails.getDownloadVideoPath();
-        String downloadFilename = videoDetails.getDownloadFilename();
-        String convertVideoPath = videoDetails.getConvertVideoPath();
-        String convertFilename = videoDetails.getConvertFilename();
-        // 1-5-1. mp3: 检查文件是否已下載並轉換過該格式
-        if(format.equals("mp3")){
-
-            if (new File(convertVideoPath).exists()) {
-                log.info("file.exists");
-                if (!rabbitResponse.queueMessageLog("notificationQueue", convertFilename).isSuccess()) {
-                    return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
-                }
-
-            } else  {
-                log.info("already been downloaded:,{}", downloadVideoPath);
-                if (!rabbitResponse.queueMessageLog("convertQueue", videoDetails).isSuccess()) {
-                    return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
-                }
-
-            }
-
-        // 1-5-2. mp4: 直接拿原始檔案
-        }else if(format.equals("mp4") && new File(downloadVideoPath).exists()){
-            log.info("mp4: already been downloaded:,{}", downloadVideoPath);
-            if (!rabbitResponse.queueMessageLog("notificationQueue", downloadFilename).isSuccess()) {
-                return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
-            }
+        if (!rabbitResponse.queueMessageLog("convertQueue", downloadLog).isSuccess()) {
+            return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.SERVER_ERROR);
         }
         return ResponseEntity.ok(ResponseUtils.success());
     }
 
-    public ApiResponse<String> convertToMp3(VideoDetails videoDetails){
-        return null;
-//        return processUtils.commonProcess(
-//                String.format(
-//                        "docker exec %s ffmpeg -i \"%s\" -q:a 0 -map a \"%s\"",
-//                        ffmpegContainName, videoDetails.getDownloadVideoPath(), videoDetails.getConvertVideoPath()
-//                ), "前端下載", "notificationQueue", videoDetails.getConvertFilename());
-    }
-
-
-    public DownloadFileDetails downloadFile(String filename) throws IOException{
+    public DownloadFileDetails download(String filename) throws IOException{
         DownloadFileDetails downloadFileDetails = new DownloadFileDetails();
         // 檔案名稱驗證： 確保檔案名稱中沒有目錄穿越的字元（例如 ../ 或 ..\）
         if (filename.contains("..")) {
             throw new IllegalArgumentException("檔案名稱不合法: " + filename);
         }
-String yt1baseDir = null;
-        log.info("filepath:{}" , yt1baseDir + filename);
+        log.info("filepath:{}" , yt1BaseDir + filename);
 
         // 解析並規範化檔案路徑
-        Path filePath = Paths.get(yt1baseDir).resolve(filename).normalize();
+        Path filePath = Paths.get(yt1BaseDir).resolve(filename).normalize();
         downloadFileDetails.setFilename(filename);
         downloadFileDetails.setPath(String.valueOf(filePath));
         log.info("downloadFileDetails:{}",downloadFileDetails);
 
         // 限制在基礎目錄內： 確保解析後的 filePath 仍位於基礎目錄內
-        if (!filePath.startsWith(yt1baseDir)) {
+        if (!filePath.startsWith(yt1BaseDir)) {
             throw new SecurityException("偵測到未授權的存取嘗試。");
         }
 

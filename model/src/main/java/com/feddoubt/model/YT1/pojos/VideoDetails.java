@@ -12,30 +12,14 @@ public class VideoDetails implements Serializable {
     private String url;
     private String videoId;
     private String title;
-    private String sanitizedTitle;
     private String ext;
     private BigDecimal duration;
     private String format;
     private String message;
     private String errorMessage;
-    private String downloadFilename;
-    private String downloadVideoPath;
-    private String convertFilename;
-    private String convertVideoPath;
+    private String path;
 
-    public void setExt(String ext) {
-        if (ext.contains("mp4")) {
-            this.ext = "." + ext;
-        } else {
-            this.ext = ".mp4." + ext;
-        }
-    }
-
-    public void setDownloadFilename() {
-        this.downloadFilename = this.title + this.ext;
-    }
-
-    public void setConvertFilename() {
-        this.convertFilename = this.title + "." + this.format;
+    public void setPath(String base) {
+        this.path = base + title;
     }
 }
