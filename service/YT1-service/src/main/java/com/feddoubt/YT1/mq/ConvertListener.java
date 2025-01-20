@@ -38,7 +38,7 @@ public class ConvertListener {
 
             if(!new File(path + ".mp4").exists()){
                 log.info("開始執行mp4下載任務...");
-                processUtils.mergeoutput(url ,title);
+                processUtils.mergeoutput(url);
             }
 
             String format = videoDetails.getFormat();

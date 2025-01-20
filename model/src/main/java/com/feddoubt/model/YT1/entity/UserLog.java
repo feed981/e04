@@ -29,11 +29,14 @@ public class UserLog implements Serializable {
     @OneToMany(mappedBy = "userLog", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<DownloadLog> downloadLogs;
 
-    @Column(name = "latitude")
-    private BigDecimal latitude; // 緯度 lat
+    @Column(name = "loc")
+    private String loc;
 
-    @Column(name = "longitude")
-    private BigDecimal longitude; // 經度 lng
+//    @Column(name = "latitude")
+//    private BigDecimal latitude; // 緯度 lat
+//
+//    @Column(name = "longitude")
+//    private BigDecimal longitude; // 經度 lng
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -41,6 +44,6 @@ public class UserLog implements Serializable {
     @Column
     private Long uid;
 
-    @Column
-    private String method;
+//    @Column
+//    private String method;
 }

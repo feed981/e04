@@ -174,7 +174,7 @@ public class ProcessUtils {
         }
     }
 
-    public void mergeoutput(String url ,String title) throws IOException, InterruptedException {
+    public void mergeoutput(String url ) throws IOException, InterruptedException {
         commonProcess(
 //            dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -o '/downloads/%(title)s.mp4' '%s'",title ,url))
 //            dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -o '/downloads/%s.mp4' --no-mtime '%s'",title ,url))

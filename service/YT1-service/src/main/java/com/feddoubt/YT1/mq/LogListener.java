@@ -2,17 +2,14 @@ package com.feddoubt.YT1.mq;
 
 import com.feddoubt.YT1.redis.RedisIdWorker;
 import com.feddoubt.YT1.service.DownloadLogService;
-import com.feddoubt.YT1.service.IpGeolocationService;
+import com.feddoubt.YT1.service.IpService;
 import com.feddoubt.YT1.service.UserLogService;
-import com.feddoubt.YT1.utils.ClientUtils;
-import com.feddoubt.common.YT1.config.message.CustomHttpStatus;
-import com.feddoubt.common.YT1.config.message.ResponseUtils;
 import com.feddoubt.model.YT1.entity.DownloadLog;
-import com.feddoubt.model.YT1.entity.UserLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import javax.servlet.http.HttpServletRequest;
 
 @Slf4j
 @Service
@@ -20,38 +17,45 @@ public class LogListener {
 
     private final DownloadLogService downloadLogService;
     private final UserLogService userLogService;
-    private final IpGeolocationService ipGeolocationService;
+    private final IpService ipService;
     private final RedisIdWorker redisIdWorker;
-    private final ClientUtils clientUtils;
 
-    public LogListener(DownloadLogService downloadLogService, UserLogService userLogService, IpGeolocationService ipGeolocationService,
-                       RedisIdWorker redisIdWorker, ClientUtils clientUtils) {
+    public LogListener(DownloadLogService downloadLogService, UserLogService userLogService, IpService ipService,
+                       RedisIdWorker redisIdWorker) {
         this.downloadLogService = downloadLogService;
         this.userLogService = userLogService;
-        this.ipGeolocationService = ipGeolocationService;
+        this.ipService = ipService;
         this.redisIdWorker = redisIdWorker;
-        this.clientUtils = clientUtils;
     }
 
     @RabbitListener(queues = "${rabbitmq.user-log-queue}")
-    public void handlUserLog(String s) {
-        log.info("user-log-queue");
+    public void handlUserLog(HttpServletRequest request) {
         try {
-            String ip = clientUtils.getIp();
-            if(ip == null){
+            log.info("開始取得當前公網IP...");
+            String ipForUser = ipService.getIpForUser();
+            if(ipForUser == null){
+                ipForUser = ipService.getClientIp(request);
+            }
+            log.info("當前公網IP:{}",ipForUser);
+            if(ipForUser == null) {
+                log.info("未取得公網IP...");
                 return;
             }
-            // add redis find loc no db
-//            if(userLogService.findByIpAddress(ip) != null) {
-//            }
-
-            UserLog userLog = new UserLog();
-            userLog.setIpAddress(ip);
-            userLog.setUid(redisIdWorker.nextId("location:" + ip));
-            ipGeolocationService.getLocationByIp(userLog);
 
         } catch (Exception e) {
-            log.error("存儲數據庫任務失敗", e);
+            log.error("公網IP任務失敗...", e);
+        }
+
+        try {
+            log.info("開始取得當前公網IP loc...");
+            String redisLocation = ipService.getRedisLocation();
+            if(redisLocation == null){
+                log.info("未取得公網IP loc...");
+                ipService.saveUserLog();
+            }
+
+        } catch (Exception e) {
+            log.error("公網IP loc任務失敗...", e);
         }
     }
 
@@ -62,7 +66,7 @@ public class LogListener {
             downloadLog.setUserLog(userLogService.findByIpAddress(ipAddress));
             downloadLogService.saveDownloadLog(downloadLog);
         } catch (Exception e) {
-            log.error("存儲數據庫任務失敗", e);
+            log.error("存儲數據庫任務失敗...", e);
         }
     }
 

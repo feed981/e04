@@ -1,12 +1,12 @@
 package com.feddoubt.YT1.controller.v1;
 
 import com.feddoubt.YT1.redis.RedisIdWorker;
+import com.feddoubt.YT1.service.IpService;
 import com.feddoubt.model.YT1.entity.DownloadLog;
 import com.feddoubt.model.YT1.pojos.DownloadFileDetails;
 import com.feddoubt.YT1.service.YVCService;
 import com.feddoubt.YT1.redis.DownloadLimiter;
 import com.feddoubt.YT1.utils.HashUtils;
-import com.feddoubt.YT1.utils.ClientUtils;
 import com.feddoubt.common.YT1.config.message.*;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
 import lombok.extern.slf4j.Slf4j;
@@ -36,17 +36,17 @@ public class YouTubeController {
 
     private final YVCService yVCService;
     private final DownloadLimiter downloadLimiter;
-    private final ClientUtils clientUtils;
+    private final IpService ipService;
     private final HashUtils hashUtils;
     private final RedisIdWorker redisIdWorker;
-    
+
     public YouTubeController(YVCService yVCService ,
                              DownloadLimiter downloadLimiter,
-                             ClientUtils clientUtils, HashUtils hashUtils ,
+                             IpService ipService, HashUtils hashUtils ,
                              RedisIdWorker redisIdWorker) {
         this.yVCService = yVCService;
         this.downloadLimiter = downloadLimiter;
-        this.clientUtils = clientUtils;
+        this.ipService = ipService;
         this.hashUtils = hashUtils;
         this.redisIdWorker = redisIdWorker;
     }
@@ -61,7 +61,7 @@ public class YouTubeController {
             return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.INVALID_YOUTUBE_URL);
         }
 
-        String ip = clientUtils.getIp();
+        String ip = ipService.getClientIp(request);
         DownloadLog downloadLog = new DownloadLog();
         downloadLog.setIpAddress(ip);
         downloadLog.setUserAgent(request.getHeader("User-Agent"));
@@ -75,7 +75,7 @@ public class YouTubeController {
 
     @GetMapping("/download")
     public ResponseEntity<?> downloadFile(HttpServletRequest request ,@RequestParam String filename) throws IOException{
-        String ip = clientUtils.getIp();
+        String ip = ipService.getClientIp(request);
         String requestHash = hashUtils.generateRequestHash(ip + ":" + filename);
 
         log.info("filename:{}",filename);
