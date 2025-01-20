@@ -1,22 +1,16 @@
 package com.feddoubt.YT1.utils;
 
 import com.feddoubt.YT1.config.ConfigProperties;
-import com.feddoubt.common.YT1.config.message.ApiResponse;
-import com.feddoubt.common.YT1.config.message.CustomHttpStatus;
-import com.feddoubt.common.YT1.config.message.RabbitResponse;
-import com.feddoubt.common.YT1.config.message.ResponseUtils;
 import com.feddoubt.model.YT1.entity.DownloadLog;
 import com.feddoubt.model.YT1.pojos.VideoDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;

@@ -2,12 +2,14 @@ package com.feddoubt.YT1.controller.v1;
 
 import com.feddoubt.YT1.redis.RedisIdWorker;
 import com.feddoubt.YT1.service.IpService;
+import com.feddoubt.common.YT1.config.message.CustomHttpStatus;
+import com.feddoubt.common.YT1.config.message.HttpStatusAdapter;
+import com.feddoubt.common.YT1.config.message.ResponseUtils;
 import com.feddoubt.model.YT1.entity.DownloadLog;
 import com.feddoubt.model.YT1.pojos.DownloadFileDetails;
 import com.feddoubt.YT1.service.YVCService;
 import com.feddoubt.YT1.redis.DownloadLimiter;
 import com.feddoubt.YT1.utils.HashUtils;
-import com.feddoubt.common.YT1.config.message.*;
 import com.feddoubt.model.YT1.dtos.YT1Dto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;

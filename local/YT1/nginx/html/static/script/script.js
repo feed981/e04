@@ -13,7 +13,8 @@ createApp({
         embedUrl: '',
     };
     },
-    mounted() {
+    mounted() {// 在组件渲染完成后执行
+        this.checkOrGenerateToken();
         this.connectws();
     },
     computed: {
@@ -22,9 +23,31 @@ createApp({
     }
     },
     methods: {
-        
+        // 頁面載入時檢查是否已有token,沒有則請求新的
+        async checkOrGenerateToken() {
+            let token = localStorage.getItem('token');
+    
+            if (!token) {
+                try {
+                    const response = await axios.get('/auth/token');
+                    token = response.data;
+                    localStorage.setItem('token', token);
+                } catch (error) {
+                    console.error('無法獲取 token:', error);
+                }
+            }
+            
+            // 設置 axios 攔截器
+            axios.interceptors.request.use(config => {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    config.headers.Authorization = `Bearer ${token}`;
+                }
+                return config;
+            });
+        },
         connectws() {
-            const socket = new SockJS('http://localhost:8801/ws'); // Nginx 或直接访问 Spring Boot 地址
+            const socket = new SockJS('http://localhost:8080/ws'); // Nginx 或直接访问 Spring Boot 地址
             const client = webstomp.over(socket);
             
             client.connect(
@@ -66,7 +89,7 @@ createApp({
                 return;
             }
             
-            await axios.post('/YT1/convert', {
+            await axios.post('/yt1/convert', {
                 url: this.url,
                 format: this.format
             }).then(response => {
@@ -82,7 +105,7 @@ createApp({
             }).catch(error => {
                 if (error.response) {
                     // 服务器返回的响应数据
-                    this.errorMessage = error.response.data;
+                    this.errorMessage = '服务器内部错误';
                     this.embedUrl = '';
                     console.error('Request failed', error.response.data);
                 } else if (error.request) {
@@ -98,7 +121,7 @@ createApp({
 
         },
         async downloadMP3() {
-            await axios.get('/YT1/download', {
+            await axios.get('/yt1/download', {
                 params: { 
                     filename: this.filename,
                     // date: new Date().toISOString(),

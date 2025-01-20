@@ -14,11 +14,11 @@ import java.io.IOException;
 
 @Slf4j
 @Component
-public class ServiceUserFilter extends OncePerRequestFilter {
-
-    private RabbitTemplate rabbitTemplate;
-
-    public ServiceUserFilter(RabbitTemplate rabbitTemplate){
+public class ServiceFilter extends OncePerRequestFilter {
+    
+    private final RabbitTemplate rabbitTemplate;
+    
+    public ServiceFilter(RabbitTemplate rabbitTemplate) {
         this.rabbitTemplate = rabbitTemplate;
     }
 
@@ -26,20 +26,21 @@ public class ServiceUserFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
-        if (request.getRequestURI().contains("/api/v1/yt1/generate-token")) {
-            // 放行
-            chain.doFilter(request, response);
-        }
-
-        String userId = request.getHeader("X-User-Id");
-        log.info("userId:{}",userId);
-        UserContext.setUserId(userId);
-        rabbitTemplate.convertAndSend("userLogQueue",request);
-
         try {
+            String userId = request.getHeader("X-User-Id");
+            log.info("Processing request for userId: {}", userId);
+            
+            // 設置到 ThreadLocal
+            UserContext.setUserId(userId);
+            
+            // 發送到 RabbitMQ
+            rabbitTemplate.convertAndSend("userLogQueue", request);
+            
             chain.doFilter(request, response);
         } finally {
+            // 清理 ThreadLocal
             UserContext.clear();
         }
     }
+
 }

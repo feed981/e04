@@ -1,8 +1,6 @@
 package com.feddoubt.gateway.filter;
 
-import com.feddoubt.gateway.config.ConfigProperties2;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
+import com.feddoubt.common.YT1.config.jwt.JwtProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -16,69 +14,64 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import javax.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
-import java.security.Key;
+import java.util.UUID;
 
 @Slf4j
 @Component
 public class AuthorizeFilter implements Ordered, GlobalFilter {
 
-    private final ConfigProperties2 configProperties;
-
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String USER_ID_HEADER = "X-User-Id";
 
-    public AuthorizeFilter(ConfigProperties2 configProperties) {
-        this.configProperties = configProperties;
-    }
+    private final JwtProvider jwtProvider;
 
-    private Key key;
-
-    @PostConstruct
-    public void init() {
-        this.key = configProperties.getBase64Secret();
+    public AuthorizeFilter(JwtProvider jwtProvider){
+        this.jwtProvider = jwtProvider;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain ) {
+
         ServerHttpRequest request = exchange.getRequest();
         ServerHttpResponse response = exchange.getResponse();
 
+        if (request.getURI().getPath().contains("/api/v1/auth/token")) {
+            log.info("AuthorizeFilter");
+            return chain.filter(exchange);  // 放行取得 token 的請求
+        }
 
         if (request.getURI().getPath().contains("/api/v1/yt1")) {
-            if (request.getURI().getPath().contains("/generate-token")) {
-                // 放行
-                return chain.filter(exchange);
-            }
+            String authHeader = request.getHeaders().getFirst(AUTHORIZATION_HEADER);
+            String userId;
 
-            // 獲取 Authorization header
-            String token = request.getHeaders().getFirst(AUTHORIZATION_HEADER);
-            log.info("token:{}",token);
-            // 驗證 token 是否存在
-            if (token == null || !token.startsWith(BEARER_PREFIX)) {
-                return handleError(exchange, "Missing or invalid token", HttpStatus.UNAUTHORIZED);
-            }
+            // 如果沒有 token，生成新的
+            if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
+                userId = UUID.randomUUID().toString();
+                String newToken = jwtProvider.generateToken(userId);
 
-            // 驗證 JWT
-            try {
-                String jwt = token.substring(BEARER_PREFIX.length());
-                Claims claims = Jwts.parser()
-                        .setSigningKey(key)
-                        .parseClaimsJws(jwt)
-                        .getBody();
+                // 將新 token 加入 response header
+                response.getHeaders().add(AUTHORIZATION_HEADER, BEARER_PREFIX + newToken);
 
-                String userId = claims.getSubject();
-                log.info("userId:{}",userId);
-
-                // 添加到 header 傳遞給下游服務
+                // 修改 request，加入 user id
                 ServerHttpRequest modifiedRequest = request.mutate()
                         .header(USER_ID_HEADER, userId)
                         .build();
 
                 return chain.filter(exchange.mutate().request(modifiedRequest).build());
+            }
 
+            try {
+                // 驗證既有 token
+                userId = jwtProvider.extractUsername(authHeader);
+                log.info("userId: {}", userId);
+
+                ServerHttpRequest modifiedRequest = request.mutate()
+                        .header(USER_ID_HEADER, userId)
+                        .build();
+
+                return chain.filter(exchange.mutate().request(modifiedRequest).build());
             } catch (Exception e) {
                 return handleError(exchange, "Invalid token", HttpStatus.UNAUTHORIZED);
             }
@@ -93,7 +86,7 @@ public class AuthorizeFilter implements Ordered, GlobalFilter {
 
     @Override
     public int getOrder() {
-        return 0;
+        return -1;
     }
 
     private Mono<Void> handleError(ServerWebExchange exchange, String message, HttpStatus status) {

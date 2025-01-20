@@ -26,11 +26,4 @@ public class ConfigProperties {
         return yt1BaseDir;
     }
 
-    @Value("${jwt.secret}")
-    private String base64Secret;
-
-    public Key getBase64Secret() {
-        byte[] decodedKey = Base64.getDecoder().decode(base64Secret);
-        return Keys.hmacShaKeyFor(decodedKey);
-    }
 }

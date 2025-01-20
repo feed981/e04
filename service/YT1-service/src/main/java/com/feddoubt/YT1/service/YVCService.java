@@ -1,23 +1,16 @@
 package com.feddoubt.YT1.service;
 
 import com.feddoubt.YT1.config.ConfigProperties;
-import com.feddoubt.YT1.utils.ProcessUtils;
 import com.feddoubt.common.YT1.config.message.CustomHttpStatus;
 import com.feddoubt.common.YT1.config.message.RabbitResponse;
 import com.feddoubt.model.YT1.entity.DownloadLog;
 import com.feddoubt.model.YT1.pojos.DownloadFileDetails;
-import com.feddoubt.model.YT1.pojos.VideoDetails;
 import com.feddoubt.common.YT1.config.message.ApiResponse;
 import com.feddoubt.common.YT1.config.message.ResponseUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-//
 
 import javax.annotation.PostConstruct;
 import java.io.*;
@@ -31,11 +24,9 @@ import java.nio.file.Paths;
 public class YVCService {
 
     private final RabbitResponse rabbitResponse;
-    private final ProcessUtils processUtils;
     private final ConfigProperties configProperties;
-    public YVCService(RabbitResponse rabbitResponse ,ProcessUtils processUtils ,ConfigProperties configProperties) {
+    public YVCService(RabbitResponse rabbitResponse  ,ConfigProperties configProperties) {
         this.rabbitResponse = rabbitResponse;
-        this.processUtils = processUtils;
         this.configProperties = configProperties;
     }
 
@@ -66,7 +57,6 @@ public class YVCService {
     public Boolean isValidYouTubeUrl(String url) {
         return url != null && url.matches(patternYoutubeUrl);
     }
-
 
     /**
      * RabbitMQ：适用于 大规模任务处理 和 分布式架构。
