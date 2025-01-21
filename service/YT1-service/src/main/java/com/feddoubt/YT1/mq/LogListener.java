@@ -4,6 +4,7 @@ import com.feddoubt.YT1.redis.RedisIdWorker;
 import com.feddoubt.YT1.service.DownloadLogService;
 import com.feddoubt.YT1.service.IpService;
 import com.feddoubt.YT1.service.UserLogService;
+import com.feddoubt.model.YT1.context.UserContext;
 import com.feddoubt.model.YT1.entity.DownloadLog;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -29,31 +30,15 @@ public class LogListener {
     }
 
     @RabbitListener(queues = "${rabbitmq.user-log-queue}")
-    public void handlUserLog(HttpServletRequest request) {
+    public void handlUserLog(String userId) {
         try {
-            log.info("開始取得當前公網IP...");
-            String ipForUser = ipService.getIpForUser();
-            if(ipForUser == null){
-                ipForUser = ipService.getClientIp(request);
-            }
-            log.info("當前公網IP:{}",ipForUser);
-            if(ipForUser == null) {
-                log.info("未取得公網IP...");
-                return;
-            }
-
-        } catch (Exception e) {
-            log.error("公網IP任務失敗...", e);
-        }
-
-        try {
+            UserContext.setUserId(userId);
             log.info("開始取得當前公網IP loc...");
             String redisLocation = ipService.getRedisLocation();
             if(redisLocation == null){
                 log.info("未取得公網IP loc...");
                 ipService.saveUserLog();
             }
-
         } catch (Exception e) {
             log.error("公網IP loc任務失敗...", e);
         }

@@ -53,8 +53,15 @@ public class YouTubeController {
         this.redisIdWorker = redisIdWorker;
     }
 
+    @GetMapping("/test")
+    public ResponseEntity<?> testFilter() {
+        log.info("进入 test-filter endpoint");
+        return ResponseEntity.ok("Test successful");
+    }
+
     @PostMapping("/convert")
-    public ResponseEntity<?> convertToMp3(@RequestBody YT1Dto dto , HttpServletRequest request) throws Exception {
+    public ResponseEntity<?> convert(@RequestBody YT1Dto dto , HttpServletRequest request) throws Exception {
+        log.info("YouTubeController");
         String url = dto.getUrl();
         if (url == null || url.isEmpty()) {
             return ResponseUtils.httpStatus2ApiResponse(CustomHttpStatus.URL_CANNOT_BE_NULL_OR_EMPTY);
@@ -76,7 +83,7 @@ public class YouTubeController {
 
 
     @GetMapping("/download")
-    public ResponseEntity<?> downloadFile(HttpServletRequest request ,@RequestParam String filename) throws IOException{
+    public ResponseEntity<?> download(HttpServletRequest request ,@RequestParam String filename) throws IOException{
         String ip = ipService.getClientIp(request);
         String requestHash = hashUtils.generateRequestHash(ip + ":" + filename);
 
@@ -112,5 +119,6 @@ public class YouTubeController {
                 .contentLength(file.length())
                 .body(resource);
     }
+
 
 }

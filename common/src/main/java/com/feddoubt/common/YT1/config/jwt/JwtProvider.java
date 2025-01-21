@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+@Slf4j
 @Component
 public class JwtProvider {
 
@@ -106,5 +108,20 @@ public class JwtProvider {
                 .getBody();
     }
 
+    // getSubject 測試用
+    public String extractSubject(String token) {
+        log.info("token:{}", token);
+        Claims claims = Jwts
+                .parserBuilder()
+                .setSigningKey(getBase64Secret())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        String base64Secret = this.base64Secret;
+        log.info("base64Secret:{}", base64Secret);
+        String subject = claims.getSubject();
+        log.info("subject:{}", subject);
+        return claims.getSubject();
+    }
 
 }

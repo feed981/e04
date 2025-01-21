@@ -13,6 +13,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
@@ -45,14 +46,22 @@ public class IpService {
     private static final String IPIFY_API_URL = "https://api.ipify.org?format=json";
 
     public String getClientIp(HttpServletRequest request) {
-        log.info("嘗試從 HTTP 頭部獲取真實的公網 IP...");
-        String ip = getIpFromRequest(request);
-        log.info("簡單判斷 IP 是否屬於內網範圍...");
-        if(isInternalIp(ip)){
-            log.info("回退機制，當從 HttpServletRequest 獲取的 IP 是內網 IP 或者無法確定是公網 IP 時，使用外部 API {} 來獲取公網 IP...",IPIFY_API_URL);
-            ip = setIpForUser();
+        String ip = getIpForUser();
+        if(getIpForUser() != null){
+            log.info("redis 已有外網...");
+            return ip;
         }
-        return ip;
+
+        log.info("嘗試從 HTTP 頭部獲取真實的公網 IP...");
+        ip = getIpFromRequest(request);
+        log.info("簡單判斷 IP 是否屬於內網範圍...");
+        if(!isInternalIp(ip)){
+            log.info("不屬於內網...");
+            return ip;
+        }
+
+        log.info("回退機制，使用外部 API: {} 來獲取公網 IP...",IPIFY_API_URL);
+        return setIpForUser();
     }
 
     private String getIpFromRequest(HttpServletRequest request) {
@@ -112,20 +121,29 @@ public class IpService {
     }
 
     public void saveUserLog() {
+        String userId = UserContext.getUserId();
         String ipForUser = getIpForUser();
-        String key = RedisConstants.USERLOG_IP_KEY + ipForUser;
-        String response = restTemplate.getForObject(IPINFO_API_URL, String.class);
+        String key = RedisConstants.USERLOG_IP_KEY + userId;
+
+        log.info("使用外部 API: {} 來獲取公網 IP loc...",IPINFO_API_URL);
+        // 生成 URL 並查詢 API
+        String url = UriComponentsBuilder.fromUriString(IPINFO_API_URL)
+                .buildAndExpand(ipForUser)
+                .toUriString();
+
+        String response = restTemplate.getForObject(url, String.class);
         if(response == null){
             return;
         }
         log.info("response:{}",response);
         try {
             //redis
-            log.info("IP loc存redis...");
+            log.info("key:{} ,IP loc存redis...",key);
             JsonNode jsonNode = objectMapper.readTree(response);
+            String ip = jsonNode.get("ip").asText();
             String loc = jsonNode.get("loc").asText();
             HashOperations<String, String, String> hashOps = stringRedisTemplate.opsForHash();
-            hashOps.put(key, "ip", ipForUser);
+            hashOps.put(key, "ip", ip);
             hashOps.put(key, "loc", loc);
             setRedisTTL(key);
             //DB

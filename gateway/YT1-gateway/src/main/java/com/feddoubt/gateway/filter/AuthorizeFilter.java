@@ -6,6 +6,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -45,9 +46,11 @@ public class AuthorizeFilter implements Ordered, GlobalFilter {
         if (request.getURI().getPath().contains("/api/v1/yt1")) {
             String authHeader = request.getHeaders().getFirst(AUTHORIZATION_HEADER);
             String userId;
+            log.info("authHeader:{}",authHeader);
 
             // 如果沒有 token，生成新的
             if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
+                log.info("沒有 token，生成新的中...");
                 userId = UUID.randomUUID().toString();
                 String newToken = jwtProvider.generateToken(userId);
 
@@ -63,8 +66,9 @@ public class AuthorizeFilter implements Ordered, GlobalFilter {
             }
 
             try {
+                String jwtToken = getJwtToken(authHeader);
                 // 驗證既有 token
-                userId = jwtProvider.extractUsername(authHeader);
+                userId = jwtProvider.extractUsername(jwtToken);
                 log.info("userId: {}", userId);
 
                 ServerHttpRequest modifiedRequest = request.mutate()
@@ -97,5 +101,14 @@ public class AuthorizeFilter implements Ordered, GlobalFilter {
         byte[] bytes = message.getBytes(StandardCharsets.UTF_8);
         DataBuffer buffer = response.bufferFactory().wrap(bytes);
         return response.writeWith(Mono.just(buffer));
+    }
+
+    private String getJwtToken(String header) {
+
+        if (header != null && header.startsWith("Bearer ")) {
+            return header.substring(7);
+        }
+
+        return null;
     }
 }

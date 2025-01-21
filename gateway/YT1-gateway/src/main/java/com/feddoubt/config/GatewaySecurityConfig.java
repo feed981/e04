@@ -12,7 +12,10 @@ public class GatewaySecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         http.csrf().disable() // 关闭 CSRF 防护
             .authorizeExchange()
-            .pathMatchers("/api/v1/auth/token", "/ws/**").permitAll() // 放行指定路径
+                // 放行指定路径
+            .pathMatchers("/YT1/api/v1/yt1/**").permitAll()
+            .pathMatchers("/YT1/api/v1/auth/token").permitAll()
+            .pathMatchers("/ws/**").permitAll()
             .anyExchange().authenticated() // 其他路径需要认证
             .and()
             .headers().frameOptions().disable(); // 允许 WebSocket 的连接升级请求
