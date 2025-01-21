@@ -9,14 +9,23 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import java.io.File;
 import java.time.Duration;
 
-public class S3DownloadTest {
+public class FileTest {
 
     private static final String bucketName = "";
     private static final String key = "path/in/s3/yourfile.txt";
-    public static void main(String[] args) {
 
+    public static void main(String[] args) {
+        fileExist();
     }
 
+    public static void fileExist(){
+        String path = "D:\\local\\yt1\\download\\Gran Turismo 3 Soundtrack - Championship Award";
+        boolean exists = new File(path + ".mp4").exists();
+        System.out.println(exists);
+        path = path + ".mp4";
+        System.out.println(path);
+
+    }
     public static void S3Uploader(){
         String filePath = "C:/YT1/download/yourfile.txt";
 

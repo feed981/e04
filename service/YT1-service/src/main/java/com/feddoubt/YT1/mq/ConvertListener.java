@@ -30,27 +30,36 @@ public class ConvertListener {
             log.info("異步下載任務前檢查...");
             VideoDetails videoDetails = processUtils.dumpjson(downloadLog);
 
-            log.info("下載任務前檔案是否存在...");
             String url = videoDetails.getUrl();
             String title = videoDetails.getTitle();
             String path = videoDetails.getPath();
             log.info("base dir path:{}",path);
 
-            if(!new File(path + ".mp4").exists()){
+            log.info("下載任務前mp4檔案是否存在...");
+            File mp4file = new File(path + ".mp4");
+            if (mp4file.exists() && mp4file.length() > 0) {
+                log.info("mp4檔案已存在...");
+
+            }else{
                 log.info("開始執行mp4下載任務...");
-                processUtils.mergeoutput(url);
+                processUtils.mergeoutput(url ,path);
             }
 
             String format = videoDetails.getFormat();
             if(format.equals("mp3")){
-                if(!new File(path + ".mp3").exists()) {
+                log.info("轉換任務前mp3檔案是否存在...");
+                File mp3file = new File(path + ".mp3");
+                if (mp3file.exists() && mp3file.length() > 0) {
+                    log.info("mp3檔案已存在...");
+
+                }else{
                     log.info("開始執行mp3轉換任務...");
-                    processUtils.ffmpegmp3(title);
+                    processUtils.ffmpegmp3(title ,path);
                 }
             }
 
-            log.info("開始通知任務.  ..");
-            String filename = title + format;
+            log.info("開始通知任務...");
+            String filename = title + "." + format;
             rabbitTemplate.convertAndSend("notificationQueue", filename);
 
         } catch (Exception e) {

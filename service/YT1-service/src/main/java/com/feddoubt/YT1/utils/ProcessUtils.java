@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
@@ -143,7 +144,7 @@ public class ProcessUtils {
     }
 
 
-    public void commonProcess(List<String> command) throws IOException, InterruptedException {
+    public void commonProcess(List<String> command ,String path) throws IOException, InterruptedException {
         log.info("Executing command: {}", String.join(" ", command));
 
         ProcessBuilder processBuilder = new ProcessBuilder(command);
@@ -164,23 +165,33 @@ public class ProcessUtils {
         log.info("Command completed with exit code: {}", exitCode);
 
         if (exitCode != 0) {
+            // 检查文件是否实际存在
+            File file = new File(path);
+            if (file.exists() && file.length() > 0) {
+                log.info("Despite exit code 1, file exists and is not empty: {}", path);
+                return; // 或返回成功状态
+            }
+
+            // 如果文件不存在或为空，才抛出异常
             throw new RuntimeException("Download failed with exit code: " + exitCode);
         }
     }
 
-    public void mergeoutput(String url ) throws IOException, InterruptedException {
+    public void mergeoutput(String url ,String path) throws IOException, InterruptedException {
         commonProcess(
 //            dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -o '/downloads/%(title)s.mp4' '%s'",title ,url))
 //            dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -o '/downloads/%s.mp4' --no-mtime '%s'",title ,url))
 //            dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o '/downloads/%s.mp4' '%s'",title ,url))
 //            dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp -f 'bestvideo[ext=mp4]+bestaudio[ext=m4a]' --merge-output-format mp4 --output '/downloads/%s.mp4' --no-keep-video --restrict-filenames '%s'",title ,url))
                 dockerCommand(String.format("sudo docker compose run ytdlp -- yt-dlp --config-location /config/yt-dlp.conf -o '%s'" ,url))
+                ,path + ".mp4"
         );
     }
 
-    public void ffmpegmp3(String title) throws IOException, InterruptedException {
+    public void ffmpegmp3(String title ,String path)throws IOException, InterruptedException {
         commonProcess(
             dockerCommand(String.format("sudo docker compose run --rm ffmpeg -i '/downloads/%s.mp4' -q:a 0 -map a '/downloads/%s.mp3'",title ,title))
+                ,path + ".mp3"
         );
     }
 }
