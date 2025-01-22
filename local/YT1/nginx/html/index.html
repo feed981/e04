@@ -38,7 +38,7 @@
       </div>
         <!-- <button @click="downloadMP3Test">downloadMP3test</button> -->
         <!-- <button @click="socketTest">socketTest</button> -->
-        <button v-if="filename" @click="downloadMP3">Download {{ downloadformat.toUpperCase() }}</button>
+        <button v-if="filename" @click="download">Download {{ downloadformat.toUpperCase() }}</button>
         <div class="error">
           {{ errorMessage }}
       </div>

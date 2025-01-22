@@ -56,6 +56,7 @@ createApp({
                     console.log("Connected to WebSocket");
                     // 订阅主题
                     client.subscribe("/topic/convert", (message) => {
+                        this.isLoading = false;
                         this.filename = message.body;
                         this.successMessage = `You can download now! Please check your browser's download folder.`;
                         console.log("Received message: ", message.body);
@@ -116,11 +117,11 @@ createApp({
                     console.error('Error', error.message);
                 }
             }).finally(() => { 
-                this.isLoading = false
+                // this.isLoading = false
             });
 
         },
-        async downloadMP3() {
+        async download() {
             await axios.get('/yt1/download', {
                 params: { 
                     filename: this.filename,
