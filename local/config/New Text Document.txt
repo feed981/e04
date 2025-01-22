@@ -1,0 +1,188 @@
+version: '3.5'
+
+services:
+  gateway_yt1:
+    build:
+      context: /vagrant/yt1/app/gateway
+      dockerfile: Dockerfile
+    container_name: yt1-gateway-app
+    ports:
+      - "64101:64101"
+    volumes:
+#      - /vagrant/yt1/app/gateway/target:/app
+      - /vagrant/yt1/app/gateway/logs:/logs
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    networks:
+      - yt1-network
+    depends_on:
+      - nacos
+
+  service_yt1:
+    build:
+      context: /vagrant/yt1/app/service
+      dockerfile: Dockerfile
+    container_name: yt1-service-app
+    ports:
+      - "64102:64102"
+    volumes:
+#      - /vagrant/yt1/app/service/target:/app
+      - /vagrant/yt1/app/service/logs:/logs
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    networks:
+      - yt1-network
+      - service-network
+    depends_on:
+      - nacos
+      - mysql
+      - rabbitmq
+      - redis
+
+  ytdlp:
+    image: mikenye/youtube-dl
+    container_name: ytdlp-container
+    volumes:
+      - /vagrant/yt1/download:/downloads
+      - ./config:/config
+    working_dir: /downloads
+    environment:
+      - YTDL_OPTIONS=--output "/downloads/%(title)s.%(ext)s" --merge-output-format mp4
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+
+  ffmpeg:
+    image: jrottenberg/ffmpeg:4.4-alpine
+    container_name: ffmpeg-container
+    volumes:
+      - /vagrant/yt1/download:/downloads
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+
+  nacos:
+    image: nacos/nacos-server:v2.2.2
+    container_name: nacos
+    restart: always
+    ports:
+      - "8848:8848"  # Nacos Web 界面访问端口
+    environment:
+      - MODE=standalone  # 单机模式
+      - SPRING_DATASOURCE_PLATFORM=mysql  # 这告诉 Nacos 使用 MySQL 数据库
+      - MYSQL_SERVICE_HOST=mysql          # 这里要确保服务名称与 mysql 容器的名称一致
+      - MYSQL_SERVICE_PORT=3306           # 端口应保持 3306
+      - MYSQL_SERVICE_DB_NAME=nacos_config
+      - MYSQL_SERVICE_USER=nacos_user
+      - MYSQL_SERVICE_PASSWORD=nacos_password
+    volumes:
+      - ./logs:/home/nacos/logs  # 持久化日志
+    networks:
+      - nacos_net
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:5.7
+    container_name: mysql
+    restart: always
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: nacos_config
+      MYSQL_USER: nacos_user
+      MYSQL_PASSWORD: nacos_password
+    volumes:
+      - mysql_data:/var/lib/mysql                                             # 持久化存储数据
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci  # 设置字符集和排序规则
+    networks:
+      - nacos_net
+      - redmine_net
+
+  nginx_yt1:
+    image: nginx:1-alpine
+    container_name: nginx_yt1
+    restart: always
+    ports:
+      - "8806:8801"
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - /vagrant/yt1/nginx/conf/nginx.conf:/etc/nginx/nginx.conf    # 主配置文件
+      - /vagrant/yt1/nginx/html:/usr/share/nginx/html               # 网站根目录
+      - /vagrant/yt1/nginx/log:/var/log/nginx                       # 日志文件目录
+    networks:
+      - nacos_net
+      - redmine_net
+      - yt1-network
+
+  redmine:
+    image: redmine:5.0.5
+    container_name: redmine
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      REDMINE_DB_DATABASE: redmine_db      # 指定要连接的数据库名称
+      REDMINE_DB_MYSQL: mysql              # 指定数据库名称
+      REDMINE_DB_USERNAME: redmine_user      # 指定数据库用户
+      REDMINE_DB_PASSWORD: redmine_password  # 指定数据库用户密码
+      REDMINE_DB_ENCODING: utf8mb4
+      REDMINE_DB_PORT: 3306
+      TZ: Asia/Taipei
+    volumes:
+      - ./redmine/files:/usr/src/redmine/files  # 持久化文件存储
+      - ./redmine/plugins:/usr/src/redmine/plugins  # 持久化插件存储
+      - ./redmine/themes:/usr/src/redmine/public/themes  # 持久化主题存储
+      - ./redmine/config/configuration.yml:/usr/src/redmine/config/configuration.yml  # 持久化配置文件
+    networks:
+      - redmine_net
+    depends_on:
+      - mysql
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # AMQP 端口
+      - "15672:15672"  # 管理界面端口
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: rabbitmq_password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_logs:/var/log/rabbitmq
+    networks:
+      - service-network
+
+  redis:
+    image: redis:latest
+    container_name: redis-server
+    ports:
+      - "6379:6379" # 將 Redis 的默認端口暴露給主機
+    volumes:
+      - redis_data:/data # 持久化存儲
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    restart: always
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - service-network
+
+networks:
+  service-network:
+  yt1-network:
+    driver: bridge
+  nacos_net:
+    name: nacos_net # 自定义网络名称
+    driver: bridge # 使用桥接驱动
+  redmine_net:
+    name: redmine_net
+    driver: bridge
+volumes:
+  mysql_data:
+  minio_data:
+    driver: local
+  rabbitmq_data:
+  rabbitmq_logs:
+  redis_data:

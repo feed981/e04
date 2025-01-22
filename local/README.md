@@ -604,3 +604,6 @@ ttl是10hr
 2025-01-22
 
 整理日誌
+token 過期 catch ExpiredJwtException
+vargant docker compose 打包佈署成功v2
+接下來要加jumpserver jenkins
