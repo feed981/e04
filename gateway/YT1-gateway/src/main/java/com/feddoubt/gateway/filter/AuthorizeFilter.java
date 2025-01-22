@@ -1,6 +1,7 @@
 package com.feddoubt.gateway.filter;
 
 import com.feddoubt.common.YT1.config.jwt.JwtProvider;
+import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -50,19 +51,9 @@ public class AuthorizeFilter implements Ordered, GlobalFilter {
 
             // 如果沒有 token，生成新的
             if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
+
                 log.info("沒有 token，生成新的中...");
-                userId = UUID.randomUUID().toString();
-                String newToken = jwtProvider.generateToken(userId);
-
-                // 將新 token 加入 response header
-                response.getHeaders().add(AUTHORIZATION_HEADER, BEARER_PREFIX + newToken);
-
-                // 修改 request，加入 user id
-                ServerHttpRequest modifiedRequest = request.mutate()
-                        .header(USER_ID_HEADER, userId)
-                        .build();
-
-                return chain.filter(exchange.mutate().request(modifiedRequest).build());
+                return generateNewToken(exchange ,chain);
             }
 
             try {
@@ -76,6 +67,9 @@ public class AuthorizeFilter implements Ordered, GlobalFilter {
                         .build();
 
                 return chain.filter(exchange.mutate().request(modifiedRequest).build());
+            } catch (ExpiredJwtException e) {
+                log.info("Token 已過期，重新生成中...");
+                return generateNewToken(exchange ,chain);
             } catch (Exception e) {
                 return handleError(exchange, "Invalid token", HttpStatus.UNAUTHORIZED);
             }
@@ -110,5 +104,22 @@ public class AuthorizeFilter implements Ordered, GlobalFilter {
         }
 
         return null;
+    }
+    private Mono<Void> generateNewToken(ServerWebExchange exchange, GatewayFilterChain chain ){
+        ServerHttpRequest request = exchange.getRequest();
+        ServerHttpResponse response = exchange.getResponse();
+
+        String userId = UUID.randomUUID().toString();
+        String newToken = jwtProvider.generateToken(userId);
+
+        // 將新 token 加入 response header
+        response.getHeaders().add(AUTHORIZATION_HEADER, BEARER_PREFIX + newToken);
+
+        // 修改 request，加入 user id
+        ServerHttpRequest modifiedRequest = request.mutate()
+                .header(USER_ID_HEADER, userId)
+                .build();
+
+        return chain.filter(exchange.mutate().request(modifiedRequest).build());
     }
 }

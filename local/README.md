@@ -5,6 +5,39 @@ vagrant docker compose
 nacos nginx mysql redmine
 從hmtt學來的基本配置
 
+```
+關於 nacos 負載均衡 nginx 負載均衡、反向代理
+
+負載均衡：
+分散請求：負載均衡將請求分散到多個服務實例上，避免單一服務承受過多負載，從而提高系統的穩定性和可用性。
+提高可用性：如果一個服務實例出現故障，負載均衡可以自動將流量導向其他可用實例，從而保證服務不中斷。
+擴展性：隨著業務增長，通過增加更多的服務實例，負載均衡可以輕鬆地應對更多的請求，而無需大幅修改系統架構。
+
+反向代理：
+集中管理請求：反向代理作為客戶端和服務之間的中介，可以集中管理和控制所有進入的請求，比如通過 Nginx 或 Apache 等軟件。
+安全性增強：反向代理可以隱藏後端服務的具體地址，提供一層額外的安全保護，防止直接攻擊後端服務。
+負載均衡的前置條件：反向代理常常與負載均衡結合使用，幫助分發請求到多個後端服務。
+緩存與性能優化：反向代理可以緩存靜態資源或頻繁訪問的內容，從而減少後端服務的負擔，提升響應速度。
+
+Nacos 與反向代理的關係：
+雖然 Nacos 本身不做反向代理，
+但它與反向代理工具（如 Nginx、Spring Cloud Gateway）配合使用非常重要。
+反向代理工具可以基於 Nacos 註冊的服務動態地進行負載均衡和請求轉發。
+```
+
+反向代理：
+
+安全性
+```
+location /app/ {
+        rewrite ^/app/(.*)$ /$1 break;  # 去掉 /app 前缀
+    }
+```
+
+負載均衡：
+我這邊gateway、service都只有一個服務
+要啟動了兩個或多個 YT1-service 或 YT2-service 的實例，Gateway 會在這些實例之間輪循，確保請求均勻分佈，從而實現負載均衡。
+
 Vagrantfile 定義虛擬機的配置
 在虛擬機內部安裝 Docker 和 Docker Compose
 使用 docker-compose.yml 文件來定義應用的多個服務
@@ -214,6 +247,13 @@ WebSocket
 
 ---
 
+2025-01-07
+
+AWS IAM
+
+
+---
+
 2025-01-08
 
 mybatis 改 JPA
@@ -236,18 +276,27 @@ if (!downloadLimiter.tryDownload(requestHash)) {
 
 ---
 
-2025-01-11 ~ 2025-01-12
-
-打包到docker compose 測試
+2025-01-11
 
 ---
 
-2025-01-13 ~ 2025-01-14
+2025-01-12
 
-AWS 
-IAM 
+打包佈署 v1 到docker compose 測試
+```
+mvn clean package -DskipTests
+```
 
-EC2
+---
+
+2025-01-13
+
+yt-dlp 和 ffmpeg 从 Windows 切换到 Linux 环境
+
+---
+
+2025-01-14
+AWS EC2
 
 ---
 
@@ -263,6 +312,11 @@ yt-dlp 和 ffmpeg 从 Windows 切换到 Linux 环境
 
 添加 user_logs 表来存储用户位置数据并与 download_logs 链接，user_id 建立外键关系
 
+---
+
+2025-01-16
+
+ip loc
 
 ---
 
@@ -287,6 +341,227 @@ cat ~/config/yt-dlp.conf
 --merge-output-format mp4
 ```
 ---
+
+2025-01-18 
+
+基礎架構與服務交互圖
+
+token
+:::spoiler
+
+
+```mermaid
+classDiagram
+    class DockerCompose {
+        +Nginx
+        +Nacos
+        +Redis
+        +RabbitMQ
+        +MySQL
+        +Redmine
+        +yt-dlp
+        +FFmpeg
+    }
+    
+    class Frontend {
+        在组件渲染完成后执行
+        checkOrGenerateToken()
+    }
+    
+    class Nginx {
+        upstream:
+        Nacos
+        Redmine
+        gateway
+        ws
+    }
+    
+    class Nacos {
+        discovery
+        config
+    }
+    
+    class Backend {
+        gateway:security、filter
+        service:security、filter、logic
+    }
+    
+    class Filter {
+        gateway: token
+        service: userId
+        get ip
+    }
+        
+    class Redis {
+        外網IP
+        user:ip:
+        外網IP取得loc
+        userlog:ip:
+    }
+    
+    class MySQL {
+        user_logs
+    }
+    
+    class RabbitMQ {
+        userLogQueue
+    }
+    
+    
+    
+    Frontend --> Nginx : Sends HTTP request
+    Nginx --> Backend : Forward requests
+    Backend --> Nacos : discovery
+    Nacos --> Backend : config
+    Backend --> Filter
+    Filter --> Redis : Cache data ip
+    Filter --> RabbitMQ : ip loc
+    RabbitMQ --> Redis
+    RabbitMQ --> MySQL
+
+```
+
+:::
+
+yt convert
+:::spoiler
+
+
+```mermaid
+classDiagram
+    class DockerCompose {
+        +Nginx
+        +Nacos
+        +Redis
+        +RabbitMQ
+        +MySQL
+        +Redmine
+        +yt-dlp
+        +FFmpeg
+    }
+    
+    class Frontend {
+        convert()
+    }
+    
+    class Nginx {
+        upstream:
+        Nacos
+        Redmine
+        gateway
+        ws
+    }
+    
+    class Nacos {
+        discovery
+        config
+    }
+    
+    class Backend {
+        gateway:security、filter
+        service:security、filter、logic
+    }
+        
+    class Redis {
+        table uid
+    }
+    
+    class MySQL {
+        download_logs
+    }
+    
+    class RabbitMQ {
+        0.embedUrlQueue
+        嵌入网址 WebSocket topic: "/topic/embedUrl"
+        1.convertQueue
+        dumpjson 檢查長度 
+        downloadLogQueue 寫入 downloadLog
+        檢查檔案是否存在
+        下載mp4 檢查檔案是否存在
+        傳換mp3 檢查檔案是否存在
+        2.notificationQueue
+        转换通知 WebSocket topic: "/topic/convert"
+    }
+    
+    class WebSocket {
+        0./topic/embedUrl 嵌入网址
+        2./topic/convert 转换通知
+    }
+    
+    
+    Frontend --> Nginx : Sends HTTP request
+    Nginx --> Backend : Forward requests
+    Backend --> Nacos : discovery
+    Nacos --> Backend : config
+    Backend --> Redis : Cache data
+    Backend --> RabbitMQ : Message queue
+    RabbitMQ --> yt-dlp : Video downloading
+    RabbitMQ --> FFmpeg : Video conversion
+    yt-dlp --> Backend : Send download status
+    RabbitMQ --> MySQL : Database operations
+    FFmpeg --> Backend : Send conversion status
+    RabbitMQ --> Frontend : 0.2.Notify via WebSocket
+
+```
+
+:::
+
+
+yt download
+:::spoiler
+
+
+```mermaid
+classDiagram
+    class DockerCompose {
+        +Nginx
+        +Nacos
+        +Redis
+        +RabbitMQ
+        +MySQL
+        +Redmine
+        +yt-dlp
+        +FFmpeg
+    }
+        
+    class Frontend {
+        download()
+    }
+    
+    class Nginx {
+        upstream:
+        Nacos
+        Redmine
+        gateway
+        ws
+    }
+    
+    class Nacos {
+        discovery
+        config
+    }
+    
+    class Backend {
+        gateway:security、filter
+        service:security、filter、logic
+    }
+        
+    class Redis {
+        downloadfile limiter
+    }
+         
+    Frontend --> Nginx : Sends HTTP request
+    Nginx --> Backend : Forward requests
+    Backend --> Nacos : discovery
+    Nacos --> Backend : config
+    Backend --> Redis : Cache data
+    
+```
+
+:::
+
+---
+
 
 2025-01-19
 queue 裡面的方法整理一下
@@ -323,3 +598,9 @@ service 在去set ThreadLocal
 
 ttl是10hr
 關閉瀏覽器後，localStorage 內的token不會消失，除非是無痕模式，或用戶手動清除
+
+---
+
+2025-01-22
+
+整理日誌
