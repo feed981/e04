@@ -1,0 +1,16 @@
+# YoutubeVideoConvert = YVC
+server:
+  port: 64102
+spring:
+  application:
+    name: yt1-service
+  cloud:
+    nacos:
+      discovery:
+        autoRegister: true # Nacos服务自动注册
+        server-addr: 192.168.33.11:8848
+        group: DEFAULT_GROUP_yt1
+      config:
+        server-addr: 192.168.33.11:8848
+        file-extension: yml
+        group: DEFAULT_GROUP_yt1

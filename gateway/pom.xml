@@ -3,15 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.feddoubt</groupId>
-        <artifactId>YT1</artifactId>
+        <artifactId>local-yt1</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>gateway</artifactId>
-    <packaging>pom</packaging>
-    <modules>
-        <module>YT1-gateway</module>
-    </modules>
+    <packaging>jar</packaging>
     <name>gateway</name>
 
     <dependencies>
@@ -58,7 +55,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.feddoubt.YT1GatewayApplication</mainClass>
+                    <mainClass>com.feddoubt.Yt1GatewayApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>
